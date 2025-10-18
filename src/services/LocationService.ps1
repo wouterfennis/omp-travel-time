@@ -2,17 +2,19 @@
 
 <#
 .SYNOPSIS
-    Windows-only location services module for the Travel Time system.
+    Windows location services module using .NET GeoCoordinateWatcher.
 
 .DESCRIPTION
-    Simplified module exposing Get-CurrentLocation which retrieves coordinates
-    exclusively via Windows Location Services (WinRT Geolocator) with light
-    caching. Legacy multi-provider, hybrid, and preference logic removed.
+    Provides Get-CurrentLocation which retrieves coordinates via
+    System.Device.Location.GeoCoordinateWatcher (Windows Location Services).
+    All former multi-provider / WinRT helper logic removed. A small cache
+    avoids repeated calls within a short interval.
+    NOTE: Requires Windows Location Services enabled and desktop app access.
 #>
 
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
-. "$PSScriptRoot\LocationService.WinRT.ps1"
+Add-Type -AssemblyName System.Device
 
 # Global location service configuration
 ## Configuration retained only for minimal caching semantics.
@@ -26,43 +28,26 @@ $script:LocationCache = @{}
 function Get-CurrentLocation {
     <#
     .SYNOPSIS
-        Gets current location using enhanced multi-provider location detection.
-    
+        Gets current location using .NET GeoCoordinateWatcher.
+
     .DESCRIPTION
-        Uses configurable location providers with fallback strategy to determine 
-        current location. Supports IP geolocation, Windows location services,
-        GPS coordinates, address geocoding, and hybrid methods.
-    
-    .PARAMETER ProviderType
-        Specific provider to use. If not specified, uses configured preference order.
-        
+        Uses System.Device.Location.GeoCoordinateWatcher to obtain latitude and
+        longitude from Windows Location Services. Provides simple caching.
+        Returns a hashtable with Success, Latitude, Longitude, Method, Provider,
+        Timestamp or Error. Timeouts / denied permission handled gracefully.
+
     .PARAMETER UseCache
-        Whether to use cached location results. Default is true.
-        
+        Use cached result if still fresh (default: true).
+
     .PARAMETER ForceRefresh
-        Forces a fresh location lookup, ignoring cache.
-    
+        Force a fresh lookup ignoring cache.
+
     .OUTPUTS
-        Hashtable containing location information with keys:
-        - Latitude: The latitude coordinate
-        - Longitude: The longitude coordinate  
-        - Success: Boolean indicating if the request was successful
-        - City: The city name
-        - Region: The region/state name
-        - Country: The country name
-        - Method: The method used to obtain location
-        - Provider: The specific provider that succeeded
-        - Accuracy: Location accuracy in meters (if available)
-        - Timestamp: When the location was obtained
-    
+        Hashtable with keys: Success, Latitude, Longitude, Method, Provider, Timestamp, Error.
+
     .EXAMPLE
-        $location = Get-CurrentLocation
-        if ($location.Success) {
-            Write-Host "Current location: $($location.City), $($location.Region) (via $($location.Method))"
-        }
-        
-    .EXAMPLE
-        $location = Get-CurrentLocation -ProviderType "Windows" -ForceRefresh
+        $loc = Get-CurrentLocation
+        if ($loc.Success) { "${loc.Latitude},${loc.Longitude}" }
     #>
     param(
         [bool]$UseCache = $true,
@@ -80,22 +65,34 @@ function Get-CurrentLocation {
     }
     
     try {
-        $result = Get-WindowsLocation
-        if ($result.Success) {
-            if ($UseCache) {
-                $result.Timestamp = Get-Date
-                $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp }
-            }
+        $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
+        $null = $watcher.Start()
+
+        $timeoutMs = 7000
+        $intervalMs = 150
+        $elapsed = 0
+        while ($watcher.Status -ne 'Ready' -and $watcher.Permission -ne 'Denied' -and $elapsed -lt $timeoutMs) {
+            Start-Sleep -Milliseconds $intervalMs
+            $elapsed += $intervalMs
+        }
+
+        if ($watcher.Permission -eq 'Denied') {
+            return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
+        }
+        if ($watcher.Status -ne 'Ready') {
+            return @{ Success = $false; Error = 'Location timeout or not ready'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
+        }
+
+        $location = $watcher.Position.Location
+        if ($location -and $location.Latitude -and $location.Longitude) {
+            $result = @{ Success = $true; Latitude = [math]::Round($location.Latitude,6); Longitude = [math]::Round($location.Longitude,6); Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher'; Timestamp = Get-Date }
+            if ($UseCache) { $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp } }
             return $result
         }
-        else {
-            Write-Warning "Windows Location unavailable: $($result.Error)"
-            return $result
-        }
+        return @{ Success = $false; Error = 'Empty coordinates returned'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
     }
     catch {
-        Write-Warning "Location detection failed: $($_.Exception.Message)"
-        return New-LocationResult -Success $false -Error $_.Exception.Message
+        return @{ Success = $false; Error = $_.Exception.Message; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
     }
 }
 
@@ -107,10 +104,6 @@ function Clear-LocationCache {
     $script:LocationCache.Clear()
     Write-Verbose "Location cache cleared"
 }
-
-
-
-
 
 function Get-TravelTimeRoutes {
     <#
