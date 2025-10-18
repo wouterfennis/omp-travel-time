@@ -416,3 +416,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Travel Time Application Specific
+scripts/config/travel-config.json
+data/
+logs/
