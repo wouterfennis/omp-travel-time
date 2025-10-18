@@ -71,7 +71,7 @@ function Get-CurrentLocation {
     #>
     try {
         # Using ip-api.com free service (1000 requests/month)
-        $response = Invoke-RestMethod -Uri "http://ip-api.com/json/" -TimeoutSec 10
+        $response = Invoke-RestMethod -Uri "https://ip-api.com/json/" -TimeoutSec 10
         if ($response.status -eq "success") {
             return @{
                 Latitude = $response.lat
