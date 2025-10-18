@@ -144,9 +144,21 @@ Example configuration:
 }
 ```
 
-## How It Works
+## Architecture
 
-### 1. Data Collection
+### Modular Design
+
+The system uses a clean, modular architecture with production logic organized in the `src/` folder:
+
+- **Clear Separation**: Production logic is separated from scripts, tests, and configuration
+- **Organized by Function**: Related functionality is grouped into logical modules  
+- **Backward Compatible**: Existing scripts and interfaces continue to work unchanged
+- **Extensible**: New providers and services can be easily added
+- **Testable**: Individual modules can be tested in isolation
+
+For detailed information about the source code organization, see [Source Organization](docs/SOURCE_ORGANIZATION.md).
+
+## How It Works
 
 - A PowerShell script runs every 5 minutes (configurable)
 - During active hours, it gets your current location via IP geolocation
@@ -171,18 +183,30 @@ Example configuration:
 ## Project Structure
 
 ```text
-cli-tag/
+omp-travel-time/
+├── src/                                  # Production logic (new modular structure)
+│   ├── core/                            # Core business logic
+│   ├── services/                        # External service integrations
+│   ├── config/                          # Configuration management
+│   ├── utils/                           # Utility functions
+│   ├── models/                          # Data models and types
+│   └── providers/                       # Different provider implementations
 ├── scripts/
 │   ├── Install-TravelTimeService.ps1    # Installation wizard
-│   ├── TravelTimeUpdater.ps1            # Main polling script
+│   ├── TravelTimeUpdater.ps1            # Main polling script (uses src/ modules)
 │   └── config/
 │       ├── travel-config.json           # Your configuration (gitignored)
 │       └── travel-config.json.template  # Template file
+├── tests/                               # Test files and data
+├── docs/                                # Documentation
+│   └── SOURCE_ORGANIZATION.md           # Details on the src/ structure
 ├── data/
 │   └── travel_time.json                 # Current travel data (gitignored)
 ├── new_config.omp.json                  # Oh My Posh configuration
 └── README.md                            # This file
 ```
+
+> **Note**: The project now uses a modular architecture with production logic organized in the `src/` folder. See [Source Organization](docs/SOURCE_ORGANIZATION.md) for detailed information about the new structure.
 
 ## Data Format
 
