@@ -41,6 +41,7 @@ $TestSuites = @{
     Unit = @{ Name = "Unit Tests"; Script = "Test-TravelTimeUnit.ps1"; Status = "Pending"; Results = $null }
     Integration = @{ Name = "Integration Tests"; Script = "Test-Integration.ps1"; Status = "Pending"; Results = $null }
     Configuration = @{ Name = "Configuration Tests"; Script = "Test-Configuration.ps1"; Status = "Pending"; Results = $null }
+    Uninstaller = @{ Name = "Uninstaller Tests"; Script = "Test-Uninstaller.ps1"; Status = "Pending"; Results = $null }
 }
 
 $OverallResults = @{
@@ -192,6 +193,7 @@ foreach ($suiteName in $TestSuites.Keys) {
 $mainScripts = @(
     "..\scripts\TravelTimeUpdater.ps1",
     "..\scripts\Install-TravelTimeService.ps1",
+    "..\scripts\Uninstall-TravelTimeService.ps1",
     "..\new_config.omp.json"
 )
 
@@ -229,6 +231,9 @@ Invoke-TestSuite "Integration" $TestSuites.Integration $integrationParams
 
 # 3. Configuration Tests
 Invoke-TestSuite "Configuration" $TestSuites.Configuration
+
+# 4. Uninstaller Tests
+Invoke-TestSuite "Uninstaller" $TestSuites.Uninstaller
 
 # Calculate final results
 $OverallResults.EndTime = Get-Date
