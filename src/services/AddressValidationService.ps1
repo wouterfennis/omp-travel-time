@@ -414,4 +414,3 @@ function Get-AddressValidationExamples {
 }
 
 # Remove the Export-ModuleMember line since this isn't being used as a proper PowerShell module
-# Export-ModuleMember -Function Test-AddressFormat, Test-AddressGeocoding, Invoke-AddressValidation, Clear-AddressValidationCache, Get-AddressValidationExamples
