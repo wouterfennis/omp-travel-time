@@ -1,2 +1,334 @@
-# omp-travel-time
-Real-time travel time display for Oh My Posh PowerShell prompts with traffic-aware routing
+# Oh My Posh Travel Time Integration
+
+This project adds real-time travel time display to your Oh My Posh PowerShell prompt using the Google Routes API. The travel time segment appears in your prompt during configured hours, showing current travel time to home with traffic-aware routing.
+
+## Features
+
+- 🏠 **Real-time travel time** to your home address
+- 🚦 **Traffic-aware routing** using Google Routes API
+- ⏰ **Configurable active hours** to optimize API usage
+- 🎨 **Color-coded traffic status** (green/yellow/red indicators)
+- 🔄 **Automated updates** via Windows scheduled tasks
+- 🛡️ **Privacy-focused** with local data storage
+
+## Prerequisites
+
+- Windows PowerShell 5.1 or newer
+- Administrator privileges (for scheduled task creation)
+- Google Maps API key with Routes API enabled
+- Oh My Posh installed and configured
+
+## Testing Before Installation
+
+**🧪 It's highly recommended to run the test suite before installation to ensure everything works correctly on your system.**
+
+### Quick Test Run
+
+```powershell
+# Navigate to your project directory
+cd C:\Git\cli-tag
+
+# Run all tests (no API key required for basic tests)
+.\tests\Run-AllTests.ps1
+
+# Or run with your API key for complete testing
+.\tests\Run-AllTests.ps1 -TestApiKey "YOUR_GOOGLE_API_KEY"
+
+# Generate a detailed HTML report
+.\tests\Run-AllTests.ps1 -GenerateReport
+```
+
+### Individual Test Suites
+
+You can also run specific test suites:
+
+```powershell
+# Unit tests (test individual functions)
+.\tests\Test-TravelTimeUnit.ps1
+
+# Integration tests (test component interaction)
+.\tests\Test-Integration.ps1
+
+# Configuration tests (test config validation and Oh My Posh integration)
+.\tests\Test-Configuration.ps1
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- ✅ **Unit Tests**: Function logic, time calculations, data validation
+- ✅ **Integration Tests**: File operations, API structure, end-to-end workflow
+- ✅ **Configuration Tests**: JSON validation, Oh My Posh config, edge cases
+- ✅ **Mock Data**: Various traffic scenarios and error conditions
+- ✅ **API Tests**: Google Routes API connectivity (with valid key)
+
+### Test Results
+
+The tests will show:
+
+- 🟢 **Pass/Fail status** for each test
+- 📊 **Overall pass rate** and summary statistics
+- 🔍 **Detailed error messages** for any failures
+- 📄 **HTML report generation** (optional)
+
+If all tests pass, you're ready to proceed with installation!
+
+## Getting Started
+
+### 1. Get Google Maps API Key
+
+1. Visit the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the **Routes API**
+4. Create credentials (API key)
+5. Optionally restrict the API key to Routes API for security
+
+**Important**: The Routes API has usage limits and costs. See [Google's pricing](https://developers.google.com/maps/documentation/routes/usage-and-billing) for details.
+
+### 2. Install the Service
+
+Run the installation script as Administrator:
+
+```powershell
+# Navigate to your project directory
+cd C:\Git\cli-tag
+
+# Run the installer (will prompt for configuration)
+.\scripts\Install-TravelTimeService.ps1
+```
+
+Or install with parameters:
+
+```powershell
+.\scripts\Install-TravelTimeService.ps1 -GoogleMapsApiKey "YOUR_API_KEY" -HomeAddress "123 Main St, City, State" -StartTime "15:00" -EndTime "23:00"
+```
+
+### 3. Reload Your PowerShell Profile
+
+```powershell
+. $PROFILE
+```
+
+## Configuration
+
+### Installation Parameters
+
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `GoogleMapsApiKey` | Your Google Routes API key | *Required* | `"AIza..."` |
+| `HomeAddress` | Your home address for calculations | *Required* | `"123 Main St, City, State"` |
+| `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
+| `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
+| `IntervalMinutes` | Update frequency in minutes | `5` | `10` |
+
+### Configuration File
+
+After installation, configuration is stored in:
+
+```text
+scripts/config/travel-config.json
+```
+
+Example configuration:
+
+```json
+{
+  "google_routes_api_key": "YOUR_API_KEY_HERE",
+  "home_address": "123 Main St, City, State",
+  "update_interval_minutes": 5,
+  "start_time": "15:00",
+  "end_time": "23:00",
+  "travel_mode": "DRIVE",
+  "routing_preference": "TRAFFIC_AWARE",
+  "units": "METRIC"
+}
+```
+
+## How It Works
+
+### 1. Data Collection
+
+- A PowerShell script runs every 5 minutes (configurable)
+- During active hours, it gets your current location via IP geolocation
+- Calls Google Routes API for travel time to your home address
+- Stores results in `data/travel_time.json`
+
+### 2. Prompt Display
+
+- Oh My Posh reads the JSON data file
+- Displays travel time only during active hours
+- Shows traffic status with color-coded indicators:
+  - 🟢 Light traffic (≤30 min)
+  - 🟡 Moderate traffic (31-45 min)
+  - 🔴 Heavy traffic (>45 min)
+
+### 3. Security
+
+- Configuration files are gitignored
+- API key is stored locally only
+- No data sent to external services except Google Routes API
+
+## Project Structure
+
+```text
+cli-tag/
+├── scripts/
+│   ├── Install-TravelTimeService.ps1    # Installation wizard
+│   ├── TravelTimeUpdater.ps1            # Main polling script
+│   └── config/
+│       ├── travel-config.json           # Your configuration (gitignored)
+│       └── travel-config.json.template  # Template file
+├── data/
+│   └── travel_time.json                 # Current travel data (gitignored)
+├── new_config.omp.json                  # Oh My Posh configuration
+└── README.md                            # This file
+```
+
+## Data Format
+
+The `travel_time.json` file contains:
+
+```json
+{
+  "last_updated": "2025-10-17T15:30:00Z",
+  "travel_time_minutes": 25,
+  "distance_km": 15.2,
+  "traffic_status": "moderate",
+  "travel_mode": "DRIVE",
+  "error": null,
+  "is_active_hours": true,
+  "active_period": "15:00 - 23:00"
+}
+```
+
+## Management
+
+### View Scheduled Task
+
+```powershell
+Get-ScheduledTask -TaskName "OhMyPosh-TravelTime"
+```
+
+### Check Current Data
+
+```powershell
+Get-Content "C:\Git\cli-tag\data\travel_time.json" | ConvertFrom-Json
+```
+
+### Manual Update
+
+```powershell
+& "C:\Git\cli-tag\scripts\TravelTimeUpdater.ps1"
+```
+
+### Disable Service
+
+```powershell
+Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
+```
+
+### Uninstall Service
+
+```powershell
+Unregister-ScheduledTask -TaskName "OhMyPosh-TravelTime" -Confirm:$false
+Remove-Item "C:\Git\cli-tag\scripts\config\travel-config.json" -Force
+Remove-Item "C:\Git\cli-tag\data\travel_time.json" -Force
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### CONFIG ERROR in prompt
+
+- Check if `travel_time.json` exists and is valid JSON
+- Verify Oh My Posh configuration syntax
+- Check file permissions
+
+#### No travel time display
+
+- Verify you're in the configured active hours
+- Check if scheduled task is running: `Get-ScheduledTask -TaskName "OhMyPosh-TravelTime"`
+- Review data file for errors: `Get-Content "data\travel_time.json"`
+
+#### API errors
+
+- Verify API key is correct and Routes API is enabled
+- Check API quotas and billing in Google Cloud Console
+- Ensure your IP isn't blocked by Google
+
+### Debug Mode
+
+Run the updater manually to see detailed output:
+
+```powershell
+& "C:\Git\cli-tag\scripts\TravelTimeUpdater.ps1" -Verbose
+```
+
+### Log Files
+
+Scheduled task logs can be viewed in:
+
+- Event Viewer → Windows Logs → Application
+- Task Scheduler → Task Scheduler Library → OhMyPosh-TravelTime
+
+## Customization
+
+### Changing the Display
+
+Edit the template in `new_config.omp.json` to customize:
+
+- Icons (currently uses 🏠 `\uf1fa` and traffic icons)
+- Colors and background templates
+- Displayed information (time, distance, etc.)
+
+### Different Travel Modes
+
+Modify `travel_mode` in config:
+
+- `"DRIVE"` - Driving (default)
+- `"WALK"` - Walking
+- `"BICYCLE"` - Cycling
+- `"TRANSIT"` - Public transportation
+
+### API Optimization
+
+To reduce API calls:
+
+- Increase `update_interval_minutes`
+- Narrow the active time window
+- Use caching strategies
+
+## Contributing
+
+This project is designed to be shared as open source. To contribute:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Privacy & Security
+
+- Your API key and home address are stored locally only
+- Data files are gitignored to prevent accidental sharing
+- Location data is obtained via IP geolocation (approximate)
+- No personal data is transmitted except to Google Routes API
+
+## License
+
+[Add your preferred license here]
+
+## Support
+
+For issues and questions:
+
+- Check the troubleshooting section above
+- Review Google Routes API documentation
+- Check Oh My Posh documentation for prompt configuration
+
+---
+
+**Note**: This integration requires active internet connection and uses external APIs. Monitor your usage to avoid unexpected charges.

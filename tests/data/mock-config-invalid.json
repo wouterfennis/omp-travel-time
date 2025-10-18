@@ -1,0 +1,10 @@
+{
+  "google_routes_api_key": "",
+  "home_address": "",
+  "update_interval_minutes": 0,
+  "start_time": "25:00",
+  "end_time": "24:70",
+  "travel_mode": "INVALID_MODE",
+  "routing_preference": "INVALID_PREFERENCE",
+  "units": "INVALID_UNITS"
+}
