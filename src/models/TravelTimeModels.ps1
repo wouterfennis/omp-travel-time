@@ -85,9 +85,13 @@ function New-LocationResult {
         [double]$Latitude = 0,
         [double]$Longitude = 0,
         [string]$City = "Unknown",
-        [string]$Region = "Unknown", 
+        [string]$Region = "Unknown",
+        [string]$Country = "Unknown",
         [bool]$Success = $false,
-        [string]$Error = $null
+        [string]$Error = $null,
+        [string]$Method = "Unknown",
+        [string]$Provider = "",
+        [double]$Accuracy = 0
     )
     
     return @{
@@ -95,8 +99,13 @@ function New-LocationResult {
         Longitude = $Longitude
         City = $City
         Region = $Region
+        Country = $Country
         Success = $Success
         Error = $Error
+        Method = $Method
+        Provider = $Provider
+        Accuracy = $Accuracy
+        Timestamp = Get-Date
     }
 }
 

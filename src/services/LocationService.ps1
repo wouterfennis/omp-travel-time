@@ -2,21 +2,47 @@
 
 <#
 .SYNOPSIS
-    External service integration module for the Travel Time system.
+    Enhanced location services module for the Travel Time system.
 
 .DESCRIPTION
-    This module provides functions for integrating with external services
-    such as geolocation and mapping APIs.
+    This module provides advanced location detection capabilities with multiple
+    providers, fallback strategies, and configurable preferences for optimal
+    accuracy and reliability.
 #>
+
+# Import location providers
+. "$PSScriptRoot\..\providers\LocationProviders.ps1"
+. "$PSScriptRoot\..\config\ConfigManager.ps1"
+. "$PSScriptRoot\..\models\TravelTimeModels.ps1"
+
+# Global location service configuration
+$script:LocationConfig = @{
+    PreferredProviders = @("Windows", "GPS", "IP", "Address")
+    EnableHybrid = $true
+    CacheResults = $true
+    CacheExpiryMinutes = 10
+}
+
+$script:LocationCache = @{}
 
 function Get-CurrentLocation {
     <#
     .SYNOPSIS
-        Gets current location using IP geolocation service.
+        Gets current location using enhanced multi-provider location detection.
     
     .DESCRIPTION
-        Uses a free IP geolocation service to determine current location.
-        Falls back to a default location if the service is unavailable.
+        Uses configurable location providers with fallback strategy to determine 
+        current location. Supports IP geolocation, Windows location services,
+        GPS coordinates, address geocoding, and hybrid methods.
+    
+    .PARAMETER ProviderType
+        Specific provider to use. If not specified, uses configured preference order.
+        
+    .PARAMETER UseCache
+        Whether to use cached location results. Default is true.
+        
+    .PARAMETER ForceRefresh
+        Forces a fresh location lookup, ignoring cache.
     
     .OUTPUTS
         Hashtable containing location information with keys:
@@ -25,24 +51,174 @@ function Get-CurrentLocation {
         - Success: Boolean indicating if the request was successful
         - City: The city name
         - Region: The region/state name
+        - Country: The country name
+        - Method: The method used to obtain location
+        - Provider: The specific provider that succeeded
+        - Accuracy: Location accuracy in meters (if available)
+        - Timestamp: When the location was obtained
     
     .EXAMPLE
         $location = Get-CurrentLocation
         if ($location.Success) {
-            Write-Host "Current location: $($location.City), $($location.Region)"
+            Write-Host "Current location: $($location.City), $($location.Region) (via $($location.Method))"
         }
+        
+    .EXAMPLE
+        $location = Get-CurrentLocation -ProviderType "Windows" -ForceRefresh
+    #>
+    param(
+        [ValidateSet("IP", "Windows", "GPS", "Address", "Hybrid", "Auto")]
+        [string]$ProviderType = "Auto",
+        [bool]$UseCache = $true,
+        [switch]$ForceRefresh
+    )
+    
+    # Check cache first
+    if ($UseCache -and -not $ForceRefresh -and $script:LocationCache.ContainsKey("current")) {
+        $cached = $script:LocationCache["current"]
+        $age = (Get-Date) - $cached.Timestamp
+        if ($age.TotalMinutes -lt $script:LocationConfig.CacheExpiryMinutes) {
+            Write-Verbose "Using cached location (age: $($age.TotalMinutes.ToString('F1')) minutes)"
+            return $cached.Location
+        }
+    }
+    
+    try {
+        # Get travel configuration for provider settings
+        $travelConfig = Get-TravelTimeConfig -ErrorAction SilentlyContinue
+        
+        # Update provider preferences from config
+        if ($travelConfig -and $travelConfig.location_providers) {
+            $script:LocationConfig.PreferredProviders = $travelConfig.location_providers.preferred_order
+            $script:LocationConfig.EnableHybrid = $travelConfig.location_providers.enable_hybrid
+        }
+        
+        # Determine which providers to try
+        $providersToTry = if ($ProviderType -eq "Auto") {
+            if ($script:LocationConfig.EnableHybrid) { @("Hybrid") }
+            else { $script:LocationConfig.PreferredProviders }
+        } else {
+            @($ProviderType)
+        }
+        
+        # Try each provider in order
+        foreach ($providerName in $providersToTry) {
+            try {
+                Write-Verbose "Attempting location detection with provider: $providerName"
+                
+                $provider = Get-ConfiguredLocationProvider -ProviderType $providerName -Config $travelConfig
+                if ($provider -and $provider.IsAvailable()) {
+                    $result = $provider.GetLocation()
+                    
+                    if ($result.Success) {
+                        # Add timestamp and cache result
+                        $result.Timestamp = Get-Date
+                        
+                        if ($UseCache) {
+                            $script:LocationCache["current"] = @{
+                                Location = $result
+                                Timestamp = $result.Timestamp
+                            }
+                        }
+                        
+                        Write-Verbose "Location obtained successfully via $providerName"
+                        return $result
+                    }
+                    else {
+                        Write-Verbose "Provider $providerName failed: $($result.Error)"
+                    }
+                }
+                else {
+                    Write-Verbose "Provider $providerName not available"
+                }
+            }
+            catch {
+                Write-Verbose "Provider $providerName threw exception: $($_.Exception.Message)"
+                continue
+            }
+        }
+        
+        # All providers failed - return legacy IP lookup as final fallback
+        Write-Warning "All enhanced providers failed, falling back to legacy IP lookup"
+        return Get-LegacyIPLocation
+    }
+    catch {
+        Write-Warning "Location detection failed: $($_.Exception.Message)"
+        return New-LocationResult -Success $false -Error $_.Exception.Message
+    }
+}
+
+function Get-ConfiguredLocationProvider {
+    <#
+    .SYNOPSIS
+        Creates a configured location provider instance.
+    
+    .PARAMETER ProviderType
+        The type of provider to create.
+        
+    .PARAMETER Config
+        Travel configuration containing provider settings.
+    #>
+    param(
+        [string]$ProviderType,
+        $Config
+    )
+    
+    try {
+        $providerConfig = @{}
+        
+        # Extract provider-specific configuration
+        if ($Config -and $Config.location_providers -and $Config.location_providers.providers) {
+            $providerSettings = $Config.location_providers.providers.$ProviderType
+            if ($providerSettings) {
+                $providerConfig = $providerSettings
+            }
+        }
+        
+        # Add global settings that providers might need
+        if ($Config -and $Config.google_maps_api_key) {
+            $providerConfig.ApiKey = $Config.google_maps_api_key
+        }
+        
+        # Create provider based on type
+        switch ($ProviderType) {
+            "Hybrid" {
+                $provider = New-LocationProvider -Type "Hybrid" -Config $providerConfig
+                
+                # Add all available sub-providers to hybrid
+                foreach ($subProviderType in @("Windows", "GPS", "IP", "Address")) {
+                    try {
+                        $subProvider = New-LocationProvider -Type $subProviderType -Config $providerConfig
+                        $provider.AddProvider($subProvider)
+                    }
+                    catch {
+                        Write-Verbose "Could not add $subProviderType to hybrid provider: $($_.Exception.Message)"
+                    }
+                }
+                
+                return $provider
+            }
+            default {
+                return New-LocationProvider -Type $ProviderType -Config $providerConfig
+            }
+        }
+    }
+    catch {
+        Write-Verbose "Failed to create provider $ProviderType`: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Get-LegacyIPLocation {
+    <#
+    .SYNOPSIS
+        Legacy IP-based location lookup (original implementation as fallback).
     #>
     try {
         # Using ip-api.com free service (1000 requests/month)
         $response = Invoke-RestMethod -Uri "https://ip-api.com/json/" -TimeoutSec 10
         if ($response.status -eq "success") {
-            return @{
-                Latitude = $response.lat
-                Longitude = $response.lon
-                Success = $true
-                City = $response.city
-                Region = $response.regionName
-            }
+            return New-LocationResult -Latitude $response.lat -Longitude $response.lon -City $response.city -Region $response.regionName -Country $response.country -Success $true -Method "IP-Legacy"
         }
         else {
             throw "Geolocation service returned: $($response.status)"
@@ -51,16 +227,95 @@ function Get-CurrentLocation {
     catch {
         # Return location unavailable status instead of fallback location
         Write-Warning "Could not get current location: $_"
-        return @{
-            Latitude = 0
-            Longitude = 0
-            Success = $false
-            City = "Unavailable"
-            Region = "Unavailable"
-            Error = $_.Exception.Message
-        }
+        return New-LocationResult -Success $false -Error $_.Exception.Message
     }
 }
+
+function Set-LocationProviderPreferences {
+    <#
+    .SYNOPSIS
+        Configures location provider preferences.
+    
+    .PARAMETER PreferredProviders
+        Array of provider names in preference order.
+        
+    .PARAMETER EnableHybrid
+        Whether to enable hybrid provider mode.
+        
+    .PARAMETER CacheExpiryMinutes
+        How long to cache location results in minutes.
+    #>
+    param(
+        [string[]]$PreferredProviders,
+        [bool]$EnableHybrid,
+        [int]$CacheExpiryMinutes
+    )
+    
+    if ($PreferredProviders) {
+        $script:LocationConfig.PreferredProviders = $PreferredProviders
+    }
+    
+    if ($PSBoundParameters.ContainsKey('EnableHybrid')) {
+        $script:LocationConfig.EnableHybrid = $EnableHybrid
+    }
+    
+    if ($CacheExpiryMinutes -gt 0) {
+        $script:LocationConfig.CacheExpiryMinutes = $CacheExpiryMinutes
+    }
+}
+
+function Clear-LocationCache {
+    <#
+    .SYNOPSIS
+        Clears the location result cache.
+    #>
+    $script:LocationCache.Clear()
+    Write-Verbose "Location cache cleared"
+}
+
+function Test-LocationProviders {
+    <#
+    .SYNOPSIS
+        Tests all available location providers and returns their status.
+    
+    .OUTPUTS
+        Array of hashtables with provider test results.
+    #>
+    $results = @()
+    
+    foreach ($providerType in @("IP", "Windows", "GPS", "Address")) {
+        $result = @{
+            Provider = $providerType
+            Available = $false
+            Success = $false
+            Error = $null
+            ResponseTime = $null
+        }
+        
+        try {
+            $start = Get-Date
+            $provider = New-LocationProvider -Type $providerType -Config @{}
+            
+            $result.Available = $provider.IsAvailable()
+            
+            if ($result.Available) {
+                $location = $provider.GetLocation()
+                $result.Success = $location.Success
+                $result.Error = $location.Error
+                $result.ResponseTime = ((Get-Date) - $start).TotalMilliseconds
+            }
+        }
+        catch {
+            $result.Error = $_.Exception.Message
+        }
+        
+        $results += $result
+    }
+    
+    return $results
+}
+
+
 
 function Get-TravelTimeRoutes {
     <#

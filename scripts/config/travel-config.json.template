@@ -6,5 +6,29 @@
   "end_time": "23:00",
   "travel_mode": "DRIVE",
   "routing_preference": "TRAFFIC_AWARE",
-  "units": "METRIC"
+  "units": "METRIC",
+  "location_providers": {
+    "preferred_order": ["Windows", "GPS", "IP", "Address"],
+    "enable_hybrid": true,
+    "cache_expiry_minutes": 10,
+    "require_user_consent": true,
+    "providers": {
+      "Windows": {
+        "use_high_accuracy": true,
+        "timeout_seconds": 30
+      },
+      "GPS": {
+        "latitude": null,
+        "longitude": null
+      },
+      "IP": {
+        "providers": ["https://ip-api.com/json/", "https://ipapi.co/json/"],
+        "timeout_seconds": 10
+      },
+      "Address": {
+        "address": null,
+        "use_google_geocoding": true
+      }
+    }
+  }
 }

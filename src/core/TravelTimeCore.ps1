@@ -13,6 +13,7 @@
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
 . "$PSScriptRoot\..\utils\TimeUtils.ps1"
 . "$PSScriptRoot\..\services\LocationService.ps1"
+. "$PSScriptRoot\..\services\RoutingService.ps1"
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
 
 function Update-TravelTimeData {
