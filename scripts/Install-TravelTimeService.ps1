@@ -118,9 +118,84 @@ function Install-TravelTimeService {
     
     if (-not $HomeAddress) {
         Write-Host "🏠 Home Address Configuration" -ForegroundColor Yellow
-        Write-Host "   Enter your home address (can be specific address or general area):" -ForegroundColor White
+        Write-Host "   Enter your home address for travel time calculations." -ForegroundColor White
+        Write-Host "   Tips for best results:" -ForegroundColor Cyan
+        Write-Host "   • Include street number and name" -ForegroundColor Cyan
+        Write-Host "   • Add city, state/province" -ForegroundColor Cyan
+        Write-Host "   • Use commas to separate components" -ForegroundColor Cyan
         Write-Host ""
-        $HomeAddress = Get-UserInput "   Home Address" "123 Main St, City, State"
+        
+        # Load address validation service
+        $addressServicePath = Join-Path $PSScriptRoot "..\src\services\AddressValidationService.ps1"
+        $addressValidationAvailable = Test-Path $addressServicePath
+        
+        if ($addressValidationAvailable) {
+            . $addressServicePath
+            Write-Host "   Examples of well-formatted addresses:" -ForegroundColor DarkCyan
+            $examples = Get-AddressValidationExamples
+            for ($i = 0; $i -lt [Math]::Min(3, $examples.Length); $i++) {
+                Write-Host "   • $($examples[$i])" -ForegroundColor DarkGray
+            }
+            Write-Host ""
+        }
+        
+        do {
+            $HomeAddress = Get-UserInput "   Home Address" "123 Main St, City, State"
+            
+            if ($addressValidationAvailable) {
+                Write-Host "   🔍 Validating address..." -ForegroundColor Yellow
+                
+                # Perform validation with current API key if available
+                $tempApiKey = if ($GoogleMapsApiKey -and (Test-ApiKey $GoogleMapsApiKey)) { $GoogleMapsApiKey } else { $null }
+                $validation = Invoke-AddressValidation -Address $HomeAddress -ApiKey $tempApiKey -AllowOverride $true
+                
+                if ($validation.IsValid) {
+                    Write-Host "   ✓ Address validation passed" -ForegroundColor Green
+                    if ($validation.RecommendedAddress -ne $HomeAddress) {
+                        Write-Host "   💡 Google suggests: $($validation.RecommendedAddress)" -ForegroundColor Cyan
+                        $useRecommended = Read-Host "   Use recommended address? [Y/n]"
+                        if ($useRecommended -ne "n" -and $useRecommended -ne "N") {
+                            $HomeAddress = $validation.RecommendedAddress
+                            Write-Host "   ✓ Using recommended address" -ForegroundColor Green
+                        }
+                    }
+                    break
+                }
+                elseif ($validation.CanProceed) {
+                    Write-Host "   ⚠️  Address has warnings:" -ForegroundColor Yellow
+                    foreach ($warning in $validation.OverallSuggestions) {
+                        Write-Host "      • $warning" -ForegroundColor Yellow
+                    }
+                    
+                    $proceed = Read-Host "   Continue with this address anyway? [Y/n]"
+                    if ($proceed -ne "n" -and $proceed -ne "N") {
+                        break
+                    }
+                }
+                else {
+                    Write-Host "   ❌ Address validation failed:" -ForegroundColor Red
+                    foreach ($issue in $validation.OverallIssues) {
+                        Write-Host "      • $issue" -ForegroundColor Red
+                    }
+                    Write-Host ""
+                    Write-Host "   💡 Suggestions:" -ForegroundColor Cyan
+                    foreach ($suggestion in $validation.OverallSuggestions) {
+                        Write-Host "      • $suggestion" -ForegroundColor Cyan
+                    }
+                    Write-Host ""
+                }
+            }
+            else {
+                Write-Host "   ⚠️  Address validation service not available - using basic validation" -ForegroundColor Yellow
+                if ($HomeAddress.Trim().Length -lt 5) {
+                    Write-Host "   ❌ Address appears too short. Please provide a more complete address." -ForegroundColor Red
+                }
+                else {
+                    break
+                }
+            }
+        } while ($true)
+        
         Write-Host "   ✓ Home address set: $HomeAddress" -ForegroundColor Green
         Write-Host ""
     }
