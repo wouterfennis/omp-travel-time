@@ -207,7 +207,9 @@ function Install-TravelTimeService {
             Write-Host "   ✓ Removed existing scheduled task" -ForegroundColor Green
         }
     }
-    catch { }
+    catch {
+        Write-Error "Failed to remove existing scheduled task: $_"
+    }
     
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
     $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) -RepetitionDuration (New-TimeSpan -Days 365) -At (Get-Date)
