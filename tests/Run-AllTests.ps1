@@ -61,7 +61,10 @@ function Write-TestHeader {
     $border = "=" * 64
     Write-Host ""
     Write-Host "+$border+" -ForegroundColor $Color
-    Write-Host "|$((' ' * ((64 - $Title.Length) / 2)) + $Title + (' ' * ((64 - $Title.Length) / 2)))|" -ForegroundColor $Color
+    $totalPadding = 64 - $Title.Length
+    $leftPadding = [int]($totalPadding / 2)
+    $rightPadding = $totalPadding - $leftPadding
+    Write-Host "|$(' ' * $leftPadding)$Title$(' ' * $rightPadding)|" -ForegroundColor $Color
     Write-Host "+$border+" -ForegroundColor $Color
     Write-Host ""
 }
