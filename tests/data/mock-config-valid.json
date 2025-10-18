@@ -1,0 +1,10 @@
+{
+  "google_routes_api_key": "AIzaSyDummyKeyForTestingPurposes12345678901234567890",
+  "home_address": "123 Test Street, Test City, TC 12345",
+  "update_interval_minutes": 5,
+  "start_time": "15:00",
+  "end_time": "23:00",
+  "travel_mode": "DRIVE",
+  "routing_preference": "TRAFFIC_AWARE",
+  "units": "METRIC"
+}

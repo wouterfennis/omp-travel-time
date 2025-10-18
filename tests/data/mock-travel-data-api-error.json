@@ -1,0 +1,10 @@
+{
+  "last_updated": "2025-10-17T16:30:00Z",
+  "travel_time_minutes": null,
+  "distance_km": null,
+  "traffic_status": null,
+  "travel_mode": "DRIVE",
+  "error": "API Error: Invalid API key",
+  "is_active_hours": true,
+  "active_period": "15:00 - 23:00"
+}
