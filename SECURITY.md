@@ -11,7 +11,9 @@ stabilization. Until semantic versioning is implemented (see Issue #22), all
 If you discover a security vulnerability:
 
 1. DO NOT create a public issue.
-2. Email: `SECURITY_CONTACT_PENDING@example.com` (to be updated) with:
+2. Use GitHub's
+   [private vulnerability reporting](https://github.com/wouterfennis/omp-travel-time/security/advisories)
+   feature with:
    - Description of the vulnerability
    - Steps to reproduce
    - Potential impact

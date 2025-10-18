@@ -42,8 +42,9 @@ individual represents the project.
 
 ## Reporting
 
-Report violations by opening a confidential security advisory or emailing:
-`SECURITY_CONTACT_PENDING@example.com` (to be updated). Provide:
+Report violations by opening a confidential advisory via GitHub's
+[private vulnerability reporting](https://github.com/wouterfennis/omp-travel-time/security/advisories)
+feature. Provide:
 
 - Description of the incident
 - Links/evidence if available
