@@ -6,5 +6,6 @@
   "travel_mode": "DRIVE",
   "error": null,
   "is_active_hours": true,
-  "active_period": "15:00 - 23:00"
+  "active_period": "15:00 - 23:00",
+  "location_status": "available"
 }

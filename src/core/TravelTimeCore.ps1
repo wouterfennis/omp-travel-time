@@ -64,6 +64,7 @@ function Update-TravelTimeData {
         
         if ($location.Success) {
             Write-Host "Current location: $($location.City), $($location.Region) ($($location.Latitude), $($location.Longitude))" -ForegroundColor Cyan
+            $result.location_status = "available"
             
             # Get travel time data
             $travelData = Get-TravelTimeRoutes -ApiKey $config.google_routes_api_key -OriginLat $location.Latitude -OriginLng $location.Longitude -Destination $config.home_address -TravelMode $config.travel_mode -RoutingPreference $config.routing_preference
@@ -80,11 +81,13 @@ function Update-TravelTimeData {
             }
         }
         else {
+            $result.location_status = "unavailable"
             $result.error = "Could not get location: $($location.Error)"
             Write-Warning $result.error
         }
     }
     else {
+        $result.location_status = "inactive"
         Write-Host "Outside active hours ($($config.start_time) - $($config.end_time)). Skipping update." -ForegroundColor Gray
     }
     

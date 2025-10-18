@@ -44,6 +44,7 @@ function New-TravelTimeResult {
         error = $null
         is_active_hours = $IsActiveHours
         active_period = if ($Config) { "$($Config.start_time) - $($Config.end_time)" } else { "Not configured" }
+        location_status = "unknown"
     }
 }
 
@@ -169,7 +170,8 @@ function Test-TravelTimeResultStructure {
         'travel_mode',
         'error',
         'is_active_hours',
-        'active_period'
+        'active_period',
+        'location_status'
     )
     
     foreach ($field in $requiredFields) {
