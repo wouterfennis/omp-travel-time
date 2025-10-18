@@ -107,7 +107,7 @@ Test-Configuration "Time Format Validation" {
         
         foreach ($time in $validTimes) {
             try {
-                $parsed = [DateTime]::ParseExact($time, "HH:mm", $null)
+                [DateTime]::ParseExact($time, "HH:mm", $null) | Out-Null
             }
             catch {
                 Write-Host "  Invalid time format: $time" -ForegroundColor Red

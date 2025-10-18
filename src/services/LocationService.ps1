@@ -49,16 +49,15 @@ function Get-CurrentLocation {
         }
     }
     catch {
-        # Fallback to a default location if geolocation fails
-        Write-Warning "Could not get current location: $_. Using fallback location."
-        # Fallback coordinates represent New York City, NY, USA.
-        # New York City is chosen as a default because it is a well-known, central location commonly used in geolocation services.
+        # Return location unavailable status instead of fallback location
+        Write-Warning "Could not get current location: $_"
         return @{
-            Latitude = 40.7128
-            Longitude = -74.0060
-            Success = $true
-            City = "Unknown"
-            Region = "Unknown"
+            Latitude = 0
+            Longitude = 0
+            Success = $false
+            City = "Unavailable"
+            Region = "Unavailable"
+            Error = $_.Exception.Message
         }
     }
 }

@@ -22,8 +22,6 @@
 .PARAMETER EndTime
     Time when travel time tracking should end each day (HH:MM format).
 
-.PARAMETER IntervalMinutes
-    How often to update travel time data in minutes. Default is 5.
 
 .EXAMPLE
     .\Install-TravelTimeService.ps1
@@ -42,25 +40,65 @@ param(
     [string]$HomeAddress,
     [string]$StartTime,
     [string]$EndTime,
-    [int]$IntervalMinutes = 5
+    [switch]$Plain
 )
+
+# Attempt to force UTF-8 output (PowerShell 7 already defaults to UTF-8)
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
+function Show-Header {
+    param([switch]$PlainMode)
+
+    if ($PlainMode) {
+        Write-Host 'Oh My Posh Travel Time Service - Installation Wizard' -ForegroundColor Cyan
+        Write-Host '----------------------------------------------------' -ForegroundColor Cyan
+        Write-Host ''
+        return
+    }
+
+    $isLegacyPwsh = ($PSVersionTable.PSVersion.Major -lt 6)
+    $unicodeOk = $true
+    try {
+        # Quick heuristic: try to write a box character silently
+        [void]('╔')
+    }
+    catch { $unicodeOk = $false }
+
+    if ($isLegacyPwsh -and -not ($env:WT_SESSION) -and ([Console]::OutputEncoding.WebName -notmatch 'utf')) {
+        $unicodeOk = $false
+    }
+
+    if (-not $unicodeOk) {
+        Write-Host 'Oh My Posh Travel Time Service - Installation Wizard' -ForegroundColor Cyan
+        Write-Host 'Use -Plain (or rerun after chcp 65001) to avoid garbled characters.' -ForegroundColor Yellow
+        Write-Host ''
+        return
+    }
+
+    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                Oh My Posh Travel Time Service                ║" -ForegroundColor Cyan
+    Write-Host "║                     Installation Wizard                      ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ''
+}
 
 function Get-UserInput {
     param(
         [string]$Prompt,
         [string]$Default = ""
     )
-    
+
     if ($Default) {
-        $input = Read-Host "$Prompt [$Default]"
-        return if ($input) { $input } else { $Default }
+        $userResponse = Read-Host "$Prompt [$Default]"
+        if ([string]::IsNullOrWhiteSpace($userResponse)) {
+            return $Default
+        }
+        return $userResponse
     }
-    else {
-        do {
-            $input = Read-Host $Prompt
-        } while (-not $input)
-        return $input
-    }
+    do {
+        $userResponse = Read-Host $Prompt
+    } while ([string]::IsNullOrWhiteSpace($userResponse))
+    return $userResponse
 }
 
 function Test-TimeFormat {
@@ -91,11 +129,7 @@ function Test-ApiKey {
 }
 
 function Install-TravelTimeService {
-    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                Oh My Posh Travel Time Service                ║" -ForegroundColor Cyan
-    Write-Host "║                     Installation Wizard                      ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
+    Show-Header -PlainMode:$Plain
     
     # Collect configuration if not provided via parameters
     if (-not $GoogleMapsApiKey) {
@@ -233,7 +267,6 @@ function Install-TravelTimeService {
     Write-Host "   • API Key: $($GoogleMapsApiKey.Substring(0, 10))..." -ForegroundColor White
     Write-Host "   • Home Address: $HomeAddress" -ForegroundColor White
     Write-Host "   • Active Hours: $StartTime - $EndTime" -ForegroundColor White
-    Write-Host "   • Update Interval: $IntervalMinutes minutes" -ForegroundColor White
     Write-Host ""
     
     $confirm = Read-Host "Continue with installation? [Y/n]"
@@ -259,7 +292,7 @@ function Install-TravelTimeService {
     $config = @{
         google_routes_api_key = $GoogleMapsApiKey
         home_address = $HomeAddress
-        update_interval_minutes = $IntervalMinutes
+        update_interval_minutes = 5
         start_time = $StartTime
         end_time = $EndTime
         travel_mode = "DRIVE"
@@ -287,16 +320,38 @@ function Install-TravelTimeService {
     }
     
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
-    $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) -RepetitionDuration (New-TimeSpan -Days 365) -At (Get-Date)
+
+    # Create a minimal one-time trigger (no repetition specified here) that starts next minute.
+    $startAt = (Get-Date).AddMinutes(1).AddSeconds(- (Get-Date).Second)
+    $trigger = New-ScheduledTaskTrigger -Once -At $startAt
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
-    
+
     try {
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" | Out-Null
-        Write-Host "   ✓ Created scheduled task: $taskName (runs every $IntervalMinutes minutes)" -ForegroundColor Green
+        Write-Host "   ✓ Created scheduled task: $taskName" -ForegroundColor Green
     }
     catch {
         Write-Error "Failed to create scheduled task: $_"
         return
+    }
+
+    # Adjust repetition AFTER registration (approach avoids parameter set conflicts).
+    try {
+        $isoInterval = 'PT5M'      # ISO 8601 duration for minutes
+        $isoDuration = 'P7300D'                            # ~20 years
+        $task = Get-ScheduledTask -TaskName $taskName
+        if ($task.Triggers.Count -gt 0) {
+            $task.Triggers[0].Repetition.Interval = $isoInterval
+            $task.Triggers[0].Repetition.Duration = $isoDuration
+            $task | Set-ScheduledTask | Out-Null
+            Write-Host "   ✓ Set repetition: every 5 min for $isoDuration" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "Could not adjust repetition: no trigger found on task."
+        }
+    }
+    catch {
+        Write-Warning "Failed to adjust repetition on scheduled task: $_"
     }
     
     # Create .gitignore entry
