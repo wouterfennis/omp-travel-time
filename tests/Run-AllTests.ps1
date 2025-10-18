@@ -41,6 +41,7 @@ $TestSuites = @{
     Unit = @{ Name = "Unit Tests"; Script = "Test-TravelTimeUnit.ps1"; Status = "Pending"; Results = $null }
     Integration = @{ Name = "Integration Tests"; Script = "Test-Integration.ps1"; Status = "Pending"; Results = $null }
     Configuration = @{ Name = "Configuration Tests"; Script = "Test-Configuration.ps1"; Status = "Pending"; Results = $null }
+    AddressValidation = @{ Name = "Address Validation Tests"; Script = "Test-AddressValidation.ps1"; Status = "Pending"; Results = $null }
 }
 
 $OverallResults = @{
@@ -72,7 +73,7 @@ function Write-TestHeader {
 function Write-SuiteStatus {
     param([string]$Suite, [string]$Status, [string]$Color = "White")
     
-    $padding = 20 - $Suite.Length
+    $padding = [Math]::Max(0, 20 - $Suite.Length)
     Write-Host "Test Suite: $Suite$(' ' * $padding) [$Status]" -ForegroundColor $Color
 }
 
@@ -229,6 +230,13 @@ Invoke-TestSuite "Integration" $TestSuites.Integration $integrationParams
 
 # 3. Configuration Tests
 Invoke-TestSuite "Configuration" $TestSuites.Configuration
+
+# 4. Address Validation Tests
+$addressValidationParams = @{}
+if ($TestApiKey -and -not $SkipApiTests) {
+    $addressValidationParams.TestApiKey = $TestApiKey
+}
+Invoke-TestSuite "AddressValidation" $TestSuites.AddressValidation $addressValidationParams
 
 # Calculate final results
 $OverallResults.EndTime = Get-Date
