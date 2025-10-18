@@ -71,7 +71,7 @@ function Get-CurrentLocation {
     #>
     try {
         # Using ip-api.com free service (1000 requests/month)
-        $response = Invoke-RestMethod -Uri "http://ip-api.com/json/" -TimeoutSec 10
+        $response = Invoke-RestMethod -Uri "https://ip-api.com/json/" -TimeoutSec 10
         if ($response.status -eq "success") {
             return @{
                 Latitude = $response.lat
@@ -88,6 +88,8 @@ function Get-CurrentLocation {
     catch {
         # Fallback to a default location if geolocation fails
         Write-Warning "Could not get current location: $_. Using fallback location."
+        # Fallback coordinates represent New York City, NY, USA.
+        # New York City is chosen as a default because it is a well-known, central location commonly used in geolocation services.
         return @{
             Latitude = 40.7128
             Longitude = -74.0060

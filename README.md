@@ -34,8 +34,7 @@ cd C:\Git\cli-tag
 # Or run with your API key for complete testing
 .\tests\Run-AllTests.ps1 -TestApiKey "YOUR_GOOGLE_API_KEY"
 
-# Generate a detailed HTML report
-.\tests\Run-AllTests.ps1 -GenerateReport
+# (Detailed HTML report generation is not currently supported)
 ```
 
 ### Individual Test Suites
