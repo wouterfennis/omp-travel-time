@@ -1,0 +1,10 @@
+{
+  "google_routes_api_key": "TEST_API_KEY_FOR_DEMO",
+  "home_address": "1600 Amphitheatre Parkway, Mountain View, CA",
+  "update_interval_minutes": 5,
+  "start_time": "15:00",
+  "end_time": "23:00",
+  "travel_mode": "DRIVE",
+  "routing_preference": "TRAFFIC_AWARE",
+  "units": "METRIC"
+}
