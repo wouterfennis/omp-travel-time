@@ -45,7 +45,7 @@ function Test-Integration {
             $IntegrationResults.Tests += @{ Name = $Name; Passed = $true; Skipped = $false }
         }
         else {
-            Write-Host "  FAILED" -ForegroundColor Red
+            Write-Host "  Failed" -ForegroundColor Red
             $IntegrationResults.Failed++
             $IntegrationResults.Tests += @{ Name = $Name; Passed = $false; Skipped = $false }
         }
