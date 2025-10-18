@@ -253,11 +253,61 @@ Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
 
 ### Uninstall Service
 
+Use the comprehensive uninstaller script for complete removal:
+
 ```powershell
-Unregister-ScheduledTask -TaskName "OhMyPosh-TravelTime" -Confirm:$false
-Remove-Item "C:\Git\cli-tag\scripts\config\travel-config.json" -Force
-Remove-Item "C:\Git\cli-tag\data\travel_time.json" -Force
+# Interactive uninstallation with prompts
+.\scripts\Uninstall-TravelTimeService.ps1
+
+# Silent uninstallation with default settings
+.\scripts\Uninstall-TravelTimeService.ps1 -Silent
+
+# Preview what would be removed without making changes
+.\scripts\Uninstall-TravelTimeService.ps1 -WhatIf
+
+# Preserve configuration and data files
+.\scripts\Uninstall-TravelTimeService.ps1 -PreserveConfig -PreserveData
+
+# Force removal without confirmation prompts
+.\scripts\Uninstall-TravelTimeService.ps1 -Force
 ```
+
+#### Manual Uninstallation (if needed)
+
+If the automated uninstaller fails, you can manually remove components:
+
+```powershell
+# Remove scheduled task
+Unregister-ScheduledTask -TaskName "OhMyPosh-TravelTime" -Confirm:$false
+
+# Remove configuration files
+Remove-Item "scripts\config\travel-config.json" -Force
+
+# Remove data files
+Remove-Item "data\travel_time.json" -Force
+Remove-Item "data\" -Force  # If empty
+
+# Clean .gitignore entries (optional)
+# Edit .gitignore and remove lines:
+# data/travel_time.json
+# scripts/config/travel-config.json
+```
+
+#### Oh My Posh Configuration Cleanup
+
+After uninstalling, you may need to remove the travel time segment from your Oh My Posh configuration:
+
+1. Open your Oh My Posh configuration file
+2. Find and remove the travel time segment (typically references `data/travel_time.json`)
+3. Reload your PowerShell profile: `. $PROFILE`
+
+#### Uninstallation Options
+
+- **Complete Removal**: Removes all components including configuration and data
+- **Preserve Data**: Keeps user configurations and travel time data for future use
+- **Silent Mode**: Uninstalls without user prompts (useful for automation)
+- **Preview Mode**: Shows what would be removed without making changes
+- **Force Mode**: Bypasses confirmation prompts for automated scenarios
 
 ## Troubleshooting
 
