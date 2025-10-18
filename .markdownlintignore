@@ -1,0 +1,6 @@
+LICENSE
+*.ps1
+*.json
+*.yml
+*.yaml
+CHANGELOG.md
