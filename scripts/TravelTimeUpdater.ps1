@@ -37,35 +37,9 @@ param(
 # These functions are now implemented in the src/ modules but we keep
 # references here to maintain compatibility with existing tests
 
-function Get-TravelTimeConfig {
-    param([string]$Path)
-    # Delegate to the new modular implementation
-    return Get-TravelTimeConfig -Path $Path
-}
-
-function Test-ActiveHours {
-    param([string]$StartTime, [string]$EndTime)
-    # Delegate to the new modular implementation
-    return Test-ActiveHours -StartTime $StartTime -EndTime $EndTime
-}
-
-function Get-CurrentLocation {
-    # Delegate to the new modular implementation
-    return Get-CurrentLocation
-}
-
-function Get-TravelTimeRoutes {
-    param(
-        [string]$ApiKey,
-        [double]$OriginLat,
-        [double]$OriginLng,
-        [string]$Destination,
-        [string]$TravelMode = "DRIVE",
-        [string]$RoutingPreference = "TRAFFIC_AWARE"
-    )
-    # Delegate to the new modular implementation
-    return Get-TravelTimeRoutes -ApiKey $ApiKey -OriginLat $OriginLat -OriginLng $OriginLng -Destination $Destination -TravelMode $TravelMode -RoutingPreference $RoutingPreference
-}
+# Note: The functions are already loaded from the core module import above,
+# so we don't need to redefine them. The original functions from the modules
+# are available directly.
 
 # Main execution using the new modular implementation
 try {
