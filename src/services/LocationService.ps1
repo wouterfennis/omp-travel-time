@@ -2,12 +2,12 @@
 
 <#
 .SYNOPSIS
-    Enhanced location services module for the Travel Time system.
+    Windows-only location services module for the Travel Time system.
 
 .DESCRIPTION
-    This module provides advanced location detection capabilities with multiple
-    providers, fallback strategies, and configurable preferences for optimal
-    accuracy and reliability.
+    Simplified module exposing Get-CurrentLocation which retrieves coordinates
+    exclusively via Windows Location Services (WinRT Geolocator) with light
+    caching. Legacy multi-provider, hybrid, and preference logic removed.
 #>
 
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
@@ -96,101 +96,6 @@ function Get-CurrentLocation {
     catch {
         Write-Warning "Location detection failed: $($_.Exception.Message)"
         return New-LocationResult -Success $false -Error $_.Exception.Message
-    }
-}
-
-function Get-ConfiguredLocationProvider {
-    <#
-    .SYNOPSIS
-        Creates a configured location provider instance.
-    
-    .PARAMETER ProviderType
-        The type of provider to create.
-        
-    .PARAMETER Config
-        Travel configuration containing provider settings.
-    #>
-    param(
-        [string]$ProviderType,
-        $Config
-    )
-    
-    try {
-        $providerConfig = @{}
-        
-        # Extract provider-specific configuration
-        if ($Config -and $Config.location_providers -and $Config.location_providers.providers) {
-            $providerSettings = $Config.location_providers.providers.$ProviderType
-            if ($providerSettings) {
-                $providerConfig = $providerSettings
-            }
-        }
-        
-        # Add global settings that providers might need
-        if ($Config -and $Config.google_maps_api_key) {
-            $providerConfig.ApiKey = $Config.google_maps_api_key
-        }
-        
-        # Create provider based on type
-        switch ($ProviderType) {
-            "Hybrid" {
-                $provider = New-LocationProvider -Type "Hybrid" -Config $providerConfig
-                
-                # Add all available sub-providers to hybrid
-                foreach ($subProviderType in @("Windows", "GPS", "IP", "Address")) {
-                    try {
-                        $subProvider = New-LocationProvider -Type $subProviderType -Config $providerConfig
-                        $provider.AddProvider($subProvider)
-                    }
-                    catch {
-                        Write-Verbose "Could not add $subProviderType to hybrid provider: $($_.Exception.Message)"
-                    }
-                }
-                
-                return $provider
-            }
-            default {
-                return New-LocationProvider -Type $ProviderType -Config $providerConfig
-            }
-        }
-    }
-    catch {
-        Write-Verbose "Failed to create provider $ProviderType`: $($_.Exception.Message)"
-        return $null
-    }
-}
-
-
-function Set-LocationProviderPreferences {
-    <#
-    .SYNOPSIS
-        Configures location provider preferences.
-    
-    .PARAMETER PreferredProviders
-        Array of provider names in preference order.
-        
-    .PARAMETER EnableHybrid
-        Whether to enable hybrid provider mode.
-        
-    .PARAMETER CacheExpiryMinutes
-        How long to cache location results in minutes.
-    #>
-    param(
-        [string[]]$PreferredProviders,
-        [bool]$EnableHybrid,
-        [int]$CacheExpiryMinutes
-    )
-    
-    if ($PreferredProviders) {
-        $script:LocationConfig.PreferredProviders = $PreferredProviders
-    }
-    
-    if ($PSBoundParameters.ContainsKey('EnableHybrid')) {
-        $script:LocationConfig.EnableHybrid = $EnableHybrid
-    }
-    
-    if ($CacheExpiryMinutes -gt 0) {
-        $script:LocationConfig.CacheExpiryMinutes = $CacheExpiryMinutes
     }
 }
 
