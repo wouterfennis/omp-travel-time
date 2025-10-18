@@ -50,20 +50,40 @@ function Test-ConfigurationFile {
     
     .DESCRIPTION
         Checks if a configuration object contains all required fields with valid values.
+        Also performs address validation if address validation service is available.
     
     .PARAMETER Config
         The configuration object to validate.
     
+    .PARAMETER ValidateAddress
+        Whether to perform address validation. Default is true.
+    
     .OUTPUTS
-        Boolean indicating if the configuration is valid.
+        Hashtable containing validation results with keys:
+        - IsValid: Boolean indicating if configuration is valid
+        - Issues: Array of validation issues found
+        - Warnings: Array of validation warnings
+        - AddressValidation: Address validation results if performed
     
     .EXAMPLE
-        $isValid = Test-ConfigurationFile -Config $config
+        $result = Test-ConfigurationFile -Config $config
     #>
-    param([PSCustomObject]$Config)
+    param(
+        [PSCustomObject]$Config,
+        [bool]$ValidateAddress = $true
+    )
+    
+    $result = @{
+        IsValid = $true
+        Issues = @()
+        Warnings = @()
+        AddressValidation = $null
+    }
     
     if (-not $Config) {
-        return $false
+        $result.IsValid = $false
+        $result.Issues += "Configuration object is null"
+        return $result
     }
     
     $requiredFields = @(
@@ -77,15 +97,49 @@ function Test-ConfigurationFile {
     
     foreach ($field in $requiredFields) {
         if (-not $Config.PSObject.Properties.Name -contains $field) {
-            Write-Warning "Missing required configuration field: $field"
-            return $false
+            $result.IsValid = $false
+            $result.Issues += "Missing required configuration field: $field"
         }
-        
-        if ([string]::IsNullOrWhiteSpace($Config.$field)) {
-            Write-Warning "Empty value for required field: $field"
-            return $false
+        elseif ([string]::IsNullOrWhiteSpace($Config.$field)) {
+            $result.IsValid = $false
+            $result.Issues += "Empty value for required field: $field"
         }
     }
     
-    return $true
+    # Perform address validation if requested and address is present
+    if ($ValidateAddress -and $Config.home_address -and -not [string]::IsNullOrWhiteSpace($Config.home_address)) {
+        try {
+            # Import address validation service
+            $addressServicePath = Join-Path $PSScriptRoot "..\services\AddressValidationService.ps1"
+            if (Test-Path $addressServicePath) {
+                . $addressServicePath
+                
+                # Perform address validation
+                $apiKey = if ($Config.google_routes_api_key -and $Config.google_routes_api_key -ne "YOUR_GOOGLE_ROUTES_API_KEY_HERE") {
+                    $Config.google_routes_api_key
+                } else {
+                    $null
+                }
+                
+                $addressResult = Invoke-AddressValidation -Address $Config.home_address -ApiKey $apiKey -AllowOverride $true
+                $result.AddressValidation = $addressResult
+                
+                if (-not $addressResult.IsValid -and -not $addressResult.CanProceed) {
+                    $result.IsValid = $false
+                    $result.Issues += "Home address validation failed: $($addressResult.OverallIssues -join ', ')"
+                }
+                elseif ($addressResult.HasWarnings) {
+                    $result.Warnings += "Home address warnings: $($addressResult.OverallSuggestions -join ', ')"
+                }
+            }
+            else {
+                $result.Warnings += "Address validation service not found - skipping address validation"
+            }
+        }
+        catch {
+            $result.Warnings += "Address validation failed: $($_.Exception.Message)"
+        }
+    }
+    
+    return $result
 }
