@@ -290,6 +290,7 @@ function Test-LocationProviders {
             Success = $false
             Error = $null
             ResponseTime = $null
+            ReliabilityScore = 0
         }
         
         try {
@@ -303,6 +304,12 @@ function Test-LocationProviders {
                 $result.Success = $location.Success
                 $result.Error = $location.Error
                 $result.ResponseTime = ((Get-Date) - $start).TotalMilliseconds
+                
+                # Calculate basic reliability score
+                if ($location.Success) {
+                    $timeScore = [math]::Max(0, 100 - ($result.ResponseTime / 50))
+                    $result.ReliabilityScore = $timeScore
+                }
             }
         }
         catch {
@@ -313,6 +320,72 @@ function Test-LocationProviders {
     }
     
     return $results
+}
+
+function Get-IPLocationReliabilityReport {
+    <#
+    .SYNOPSIS
+        Generates a comprehensive reliability report for IP geolocation providers.
+    
+    .DESCRIPTION
+        Tests multiple IP providers, evaluates VPN impact, and provides
+        recommendations for optimal location detection configuration.
+    #>
+    param(
+        [int]$TestIterations = 3,
+        [switch]$IncludeVPNDetection
+    )
+    
+    Write-Host "Generating IP Location Reliability Report..." -ForegroundColor Yellow
+    
+    $report = @{
+        Timestamp = Get-Date
+        ProviderAssessments = @()
+        VPNDetection = $null
+        Recommendations = @()
+        OverallScore = 0
+    }
+    
+    # Test provider reliability
+    Write-Host "Testing IP geolocation providers..." -ForegroundColor Cyan
+    $report.ProviderAssessments = Test-IPProviderReliability -TestIterations $TestIterations
+    
+    # VPN detection if requested
+    if ($IncludeVPNDetection) {
+        Write-Host "Testing for VPN usage..." -ForegroundColor Cyan
+        $report.VPNDetection = Test-VPNDetection
+    }
+    
+    # Generate recommendations
+    if ($report.ProviderAssessments.Count -gt 0) {
+        $bestProvider = $report.ProviderAssessments | Sort-Object ReliabilityScore -Descending | Select-Object -First 1
+        $report.OverallScore = $bestProvider.ReliabilityScore
+        
+        $report.Recommendations += "Best performing IP provider: $($bestProvider.Provider) (Score: $($bestProvider.ReliabilityScore))"
+        
+        # Filter reliable providers (score > 70)
+        $reliableProviders = $report.ProviderAssessments | Where-Object { $_.ReliabilityScore -gt 70 }
+        if ($reliableProviders.Count -gt 1) {
+            $providerList = ($reliableProviders | Select-Object -First 3 | ForEach-Object { Split-Path $_.Provider -Leaf }) -join ", "
+            $report.Recommendations += "Recommended provider list: $providerList"
+        }
+        
+        # Warn about poor performers
+        $poorProviders = $report.ProviderAssessments | Where-Object { $_.ReliabilityScore -lt 50 }
+        if ($poorProviders.Count -gt 0) {
+            foreach ($poor in $poorProviders) {
+                $report.Recommendations += "Consider removing unreliable provider: $($poor.Provider) (Score: $($poor.ReliabilityScore))"
+            }
+        }
+    }
+    
+    # VPN-related recommendations
+    if ($report.VPNDetection -and $report.VPNDetection.VPNDetected) {
+        $report.Recommendations += "VPN detected (Confidence: $($report.VPNDetection.Confidence)%) - consider using Windows Location Services or GPS coordinates for better accuracy"
+        $report.Recommendations += "VPN indicators: $($report.VPNDetection.Reasons -join '; ')"
+    }
+    
+    return $report
 }
 
 

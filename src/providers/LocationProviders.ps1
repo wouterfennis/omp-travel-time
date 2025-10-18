@@ -14,6 +14,264 @@
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
 
 # IP-based geolocation provider functions
+
+function Parse-IPLocationResponse {
+    param(
+        $Response,
+        [string]$ProviderUrl
+    )
+    
+    try {
+        if ($ProviderUrl.Contains("ip-api.com")) {
+            if ($Response.status -eq "success") {
+                return New-LocationResult -Latitude $Response.lat -Longitude $Response.lon -City $Response.city -Region $Response.regionName -Country $Response.country -Success $true -Method "IP" -Provider $ProviderUrl
+            }
+        }
+        elseif ($ProviderUrl.Contains("ipapi.co")) {
+            if ($Response.ip) {
+                return New-LocationResult -Latitude $Response.latitude -Longitude $Response.longitude -City $Response.city -Region $Response.region -Country $Response.country_name -Success $true -Method "IP" -Provider $ProviderUrl
+            }
+        }
+        elseif ($ProviderUrl.Contains("ipinfo.io")) {
+            if ($Response.loc) {
+                $coords = $Response.loc -split ','
+                $lat = [double]$coords[0]
+                $lng = [double]$coords[1]
+                return New-LocationResult -Latitude $lat -Longitude $lng -City $Response.city -Region $Response.region -Country $Response.country -Success $true -Method "IP" -Provider $ProviderUrl
+            }
+        }
+        elseif ($ProviderUrl.Contains("freegeoip.app")) {
+            if ($Response.latitude -and $Response.longitude) {
+                return New-LocationResult -Latitude $Response.latitude -Longitude $Response.longitude -City $Response.city -Region $Response.region_name -Country $Response.country_name -Success $true -Method "IP" -Provider $ProviderUrl
+            }
+        }
+        elseif ($ProviderUrl.Contains("db-ip.com")) {
+            if ($Response.latitude -and $Response.longitude) {
+                return New-LocationResult -Latitude $Response.latitude -Longitude $Response.longitude -City $Response.city -Region $Response.stateProv -Country $Response.countryName -Success $true -Method "IP" -Provider $ProviderUrl
+            }
+        }
+        
+        return New-LocationResult -Success $false -Error "Unknown provider response format"
+    }
+    catch {
+        return New-LocationResult -Success $false -Error "Failed to parse response: $($_.Exception.Message)"
+    }
+}
+
+function Test-IPProviderReliability {
+    <#
+    .SYNOPSIS
+        Tests and scores IP geolocation providers for reliability and accuracy.
+    
+    .DESCRIPTION
+        Evaluates multiple IP geolocation providers by testing response time,
+        success rate, and consistency of results to provide reliability scores.
+    
+    .OUTPUTS
+        Array of provider assessment results with reliability scores.
+    #>
+    param(
+        [string[]]$Providers = @(
+            "https://ip-api.com/json/",
+            "https://ipapi.co/json/",
+            "https://ipinfo.io/json",
+            "https://freegeoip.app/json/",
+            "https://api.db-ip.com/v2/free/self"
+        ),
+        [int]$TestIterations = 3
+    )
+    
+    $results = @()
+    
+    foreach ($provider in $Providers) {
+        $assessment = @{
+            Provider = $provider
+            ResponseTimes = @()
+            SuccessCount = 0
+            TotalAttempts = 0
+            Locations = @()
+            ReliabilityScore = 0
+            AverageResponseTime = 0
+            SuccessRate = 0
+        }
+        
+        for ($i = 1; $i -le $TestIterations; $i++) {
+            try {
+                $start = Get-Date
+                $response = Invoke-RestMethod -Uri $provider -TimeoutSec 10
+                $elapsed = ((Get-Date) - $start).TotalMilliseconds
+                
+                $parsed = Parse-IPLocationResponse -Response $response -ProviderUrl $provider
+                
+                $assessment.TotalAttempts++
+                $assessment.ResponseTimes += $elapsed
+                
+                if ($parsed.Success) {
+                    $assessment.SuccessCount++
+                    $assessment.Locations += $parsed
+                }
+            }
+            catch {
+                $assessment.TotalAttempts++
+                Write-Verbose "Provider $provider test $i failed: $($_.Exception.Message)"
+            }
+        }
+        
+        # Calculate metrics
+        if ($assessment.ResponseTimes.Count -gt 0) {
+            $assessment.AverageResponseTime = ($assessment.ResponseTimes | Measure-Object -Average).Average
+        }
+        
+        if ($assessment.TotalAttempts -gt 0) {
+            $assessment.SuccessRate = $assessment.SuccessCount / $assessment.TotalAttempts
+        }
+        
+        # Calculate reliability score (0-100)
+        $timeScore = if ($assessment.AverageResponseTime -gt 0) {
+            [math]::Max(0, 100 - ($assessment.AverageResponseTime / 50)) # 50ms = 99 points, 5000ms = 0 points
+        } else { 0 }
+        
+        $successScore = $assessment.SuccessRate * 100
+        
+        # Check location consistency (if multiple successful calls)
+        $consistencyScore = 100
+        if ($assessment.Locations.Count -gt 1) {
+            $firstLoc = $assessment.Locations[0]
+            $maxDistance = 0
+            
+            foreach ($loc in $assessment.Locations[1..($assessment.Locations.Count-1)]) {
+                $distance = Get-LocationDistance -Lat1 $firstLoc.Latitude -Lng1 $firstLoc.Longitude -Lat2 $loc.Latitude -Lng2 $loc.Longitude
+                if ($distance -gt $maxDistance) {
+                    $maxDistance = $distance
+                }
+            }
+            
+            # Penalize inconsistent results (>10km difference = lower score)
+            if ($maxDistance -gt 10) {
+                $consistencyScore = [math]::Max(0, 100 - ($maxDistance - 10))
+            }
+        }
+        
+        # Overall reliability score (weighted average)
+        $assessment.ReliabilityScore = [math]::Round(($successScore * 0.5) + ($timeScore * 0.3) + ($consistencyScore * 0.2), 1)
+        
+        $results += $assessment
+    }
+    
+    return $results | Sort-Object ReliabilityScore -Descending
+}
+
+function Get-LocationDistance {
+    <#
+    .SYNOPSIS
+        Calculates distance between two GPS coordinates using Haversine formula.
+    #>
+    param(
+        [double]$Lat1,
+        [double]$Lng1,
+        [double]$Lat2,
+        [double]$Lng2
+    )
+    
+    $R = 6371 # Earth's radius in kilometers
+    $dLat = [math]::PI * ($Lat2 - $Lat1) / 180
+    $dLng = [math]::PI * ($Lng2 - $Lng1) / 180
+    
+    $a = [math]::Sin($dLat/2) * [math]::Sin($dLat/2) + 
+         [math]::Cos([math]::PI * $Lat1 / 180) * [math]::Cos([math]::PI * $Lat2 / 180) *
+         [math]::Sin($dLng/2) * [math]::Sin($dLng/2)
+    
+    $c = 2 * [math]::Atan2([math]::Sqrt($a), [math]::Sqrt(1-$a))
+    
+    return $R * $c
+}
+
+function Test-VPNDetection {
+    <#
+    .SYNOPSIS
+        Attempts to detect if the current connection is using a VPN.
+    
+    .DESCRIPTION
+        Uses various techniques to detect VPN usage which can affect 
+        IP geolocation accuracy.
+    #>
+    
+    $indicators = @{
+        VPNDetected = $false
+        Confidence = 0
+        Reasons = @()
+    }
+    
+    try {
+        # Test 1: Check for common VPN IP ranges and providers
+        $ipInfo = Invoke-RestMethod -Uri "https://ipapi.co/json/" -TimeoutSec 10 -ErrorAction SilentlyContinue
+        
+        if ($ipInfo) {
+            # Check for VPN-related organization names
+            $vpnKeywords = @("VPN", "Virtual Private", "Proxy", "Hosting", "Data Center", "Cloud", "Amazon", "Google Cloud", "Microsoft Azure")
+            foreach ($keyword in $vpnKeywords) {
+                if ($ipInfo.org -and $ipInfo.org -like "*$keyword*") {
+                    $indicators.VPNDetected = $true
+                    $indicators.Confidence += 20
+                    $indicators.Reasons += "Organization contains VPN-related keyword: $keyword"
+                }
+            }
+            
+            # Check for unusual ISP names
+            if ($ipInfo.org -and ($ipInfo.org -like "*Hosting*" -or $ipInfo.org -like "*Server*" -or $ipInfo.org -like "*Datacenter*")) {
+                $indicators.VPNDetected = $true
+                $indicators.Confidence += 15
+                $indicators.Reasons += "ISP appears to be hosting provider"
+            }
+        }
+        
+        # Test 2: Compare results from multiple IP services for consistency
+        $locations = @()
+        $providers = @("https://ip-api.com/json/", "https://ipapi.co/json/")
+        
+        foreach ($provider in $providers) {
+            try {
+                $response = Invoke-RestMethod -Uri $provider -TimeoutSec 5
+                $parsed = Parse-IPLocationResponse -Response $response -ProviderUrl $provider
+                if ($parsed.Success) {
+                    $locations += $parsed
+                }
+            }
+            catch {
+                # Ignore failures for VPN detection
+            }
+        }
+        
+        if ($locations.Count -gt 1) {
+            $maxDistance = 0
+            for ($i = 0; $i -lt $locations.Count - 1; $i++) {
+                for ($j = $i + 1; $j -lt $locations.Count; $j++) {
+                    $distance = Get-LocationDistance -Lat1 $locations[$i].Latitude -Lng1 $locations[$i].Longitude -Lat2 $locations[$j].Latitude -Lng2 $locations[$j].Longitude
+                    if ($distance -gt $maxDistance) {
+                        $maxDistance = $distance
+                    }
+                }
+            }
+            
+            # Large discrepancies might indicate VPN
+            if ($maxDistance -gt 100) {
+                $indicators.VPNDetected = $true
+                $indicators.Confidence += 25
+                $indicators.Reasons += "Location providers show inconsistent results (${maxDistance}km apart)"
+            }
+        }
+        
+        # Cap confidence at 100
+        $indicators.Confidence = [math]::Min(100, $indicators.Confidence)
+        
+    }
+    catch {
+        Write-Verbose "VPN detection failed: $($_.Exception.Message)"
+    }
+    
+    return $indicators
+}
+
 function Invoke-IPLocationProvider {
     param(
         [hashtable]$Config = @{}
@@ -21,7 +279,10 @@ function Invoke-IPLocationProvider {
     
     $providers = @(
         "https://ip-api.com/json/",
-        "https://ipapi.co/json/"
+        "https://ipapi.co/json/",
+        "https://ipinfo.io/json",
+        "https://freegeoip.app/json/",
+        "https://api.db-ip.com/v2/free/self"
     )
     
     if ($Config.providers) {
@@ -36,15 +297,9 @@ function Invoke-IPLocationProvider {
             
             $response = Invoke-RestMethod -Uri $providerUrl -TimeoutSec $timeout
             
-            if ($providerUrl.Contains("ip-api.com")) {
-                if ($response.status -eq "success") {
-                    return New-LocationResult -Latitude $response.lat -Longitude $response.lon -City $response.city -Region $response.regionName -Country $response.country -Success $true -Method "IP" -Provider $providerUrl
-                }
-            }
-            elseif ($providerUrl.Contains("ipapi.co")) {
-                if ($response.ip) {
-                    return New-LocationResult -Latitude $response.latitude -Longitude $response.longitude -City $response.city -Region $response.region -Country $response.country_name -Success $true -Method "IP" -Provider $providerUrl
-                }
+            $parsed = Parse-IPLocationResponse -Response $response -ProviderUrl $providerUrl
+            if ($parsed.Success) {
+                return $parsed
             }
         }
         catch {

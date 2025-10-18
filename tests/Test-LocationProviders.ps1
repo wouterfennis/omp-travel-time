@@ -335,11 +335,10 @@ try {
     # Test network failure simulation (if not skipping network tests)
     if (-not $SkipNetworkTests) {
         # Test with invalid IP provider URL
-        $ipProvider = [IPLocationProvider]::new()
-        $ipProvider.Providers = @("https://invalid-domain-that-should-not-exist.com/json")
-        $failedLocation = $ipProvider.GetLocation()
-        Write-TestResult "Error Handling - Network Failure" (-not $failedLocation.Success)
-        Write-TestResult "Error Handling - Proper Error Message" (-not [string]::IsNullOrEmpty($failedLocation.Error))
+        $invalidConfig = @{ providers = @("https://invalid-domain-that-should-not-exist.com/json") }
+        $invalidResult = Invoke-IPLocationProvider -Config $invalidConfig
+        Write-TestResult "Error Handling - Network Failure" (-not $invalidResult.Success)
+        Write-TestResult "Error Handling - Proper Error Message" (-not [string]::IsNullOrEmpty($invalidResult.Error))
     } else {
         Write-TestSkipped "Error Handling - Network Failure" "Network tests skipped"
     }
@@ -353,6 +352,59 @@ try {
     }
 } catch {
     Write-TestResult "Error Handling and Fallback" $false $_.Exception.Message
+}
+
+# Test 12: IP Provider Reliability Assessment
+Write-Host "`nTesting IP Provider Reliability Assessment..."
+if (-not $SkipNetworkTests) {
+    try {
+        $reliabilityReport = Test-IPProviderReliability -TestIterations 1
+        Write-TestResult "Reliability Assessment - Report Generation" ($reliabilityReport.Count -gt 0)
+        
+        if ($reliabilityReport.Count -gt 0) {
+            $hasScores = ($reliabilityReport | Where-Object { $_.ReliabilityScore -gt 0 }).Count -gt 0
+            Write-TestResult "Reliability Assessment - Scoring" $hasScores
+            
+            $hasTimings = ($reliabilityReport | Where-Object { $_.AverageResponseTime -gt 0 }).Count -gt 0
+            Write-TestResult "Reliability Assessment - Response Times" $hasTimings
+        }
+    } catch {
+        Write-TestResult "Reliability Assessment" $false $_.Exception.Message
+    }
+} else {
+    Write-TestSkipped "IP Provider Reliability Assessment" "Network tests skipped"
+}
+
+# Test 13: VPN Detection
+Write-Host "`nTesting VPN Detection..."
+if (-not $SkipNetworkTests) {
+    try {
+        $vpnDetection = Test-VPNDetection
+        Write-TestResult "VPN Detection - Function Works" ($null -ne $vpnDetection)
+        Write-TestResult "VPN Detection - Has Confidence Score" ($vpnDetection.Confidence -ge 0 -and $vpnDetection.Confidence -le 100)
+        Write-TestResult "VPN Detection - Has Detection Result" ([bool]::TryParse($vpnDetection.VPNDetected, [ref]$null))
+    } catch {
+        Write-TestResult "VPN Detection" $false $_.Exception.Message
+    }
+} else {
+    Write-TestSkipped "VPN Detection" "Network tests skipped"
+}
+
+# Test 14: Location Distance Calculation
+Write-Host "`nTesting Location Distance Calculation..."
+try {
+    # Test known distance (New York to Los Angeles ~ 3944 km)
+    $distance = Get-LocationDistance -Lat1 40.7128 -Lng1 -74.0060 -Lat2 34.0522 -Lng2 -118.2437
+    $expectedDistance = 3944 # km
+    $tolerance = 100 # ±100km tolerance
+    
+    Write-TestResult "Distance Calculation - Known Distance" ([math]::Abs($distance - $expectedDistance) -lt $tolerance) "Calculated: $distance km, Expected: ~$expectedDistance km"
+    
+    # Test same location (should be 0)
+    $sameDistance = Get-LocationDistance -Lat1 40.7128 -Lng1 -74.0060 -Lat2 40.7128 -Lng2 -74.0060
+    Write-TestResult "Distance Calculation - Same Location" ($sameDistance -eq 0)
+} catch {
+    Write-TestResult "Location Distance Calculation" $false $_.Exception.Message
 }
 
 # Test Summary
