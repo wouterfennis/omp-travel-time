@@ -71,15 +71,23 @@ function Get-CurrentLocation {
         $timeoutMs = 7000
         $intervalMs = 150
         $elapsed = 0
-        while ($watcher.Status -ne 'Ready' -and $watcher.Permission -ne 'Denied' -and $elapsed -lt $timeoutMs) {
+        $earlyLocated = $false
+        while ($elapsed -lt $timeoutMs) {
+            if ($watcher.Permission -eq 'Denied') { break }
+            if ($watcher.Status -eq 'Ready') {
+                $locTry = $watcher.Position.Location
+                if ($locTry -and $locTry.Latitude -and $locTry.Longitude) { $earlyLocated = $true; break }
+            }
             Start-Sleep -Milliseconds $intervalMs
             $elapsed += $intervalMs
         }
 
         if ($watcher.Permission -eq 'Denied') {
+            $watcher.Stop() | Out-Null
             return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
-        if ($watcher.Status -ne 'Ready') {
+        if (-not $earlyLocated -and $watcher.Status -ne 'Ready') {
+            $watcher.Stop() | Out-Null
             return @{ Success = $false; Error = 'Location timeout or not ready'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
@@ -87,8 +95,10 @@ function Get-CurrentLocation {
         if ($location -and $location.Latitude -and $location.Longitude) {
             $result = @{ Success = $true; Latitude = [math]::Round($location.Latitude,6); Longitude = [math]::Round($location.Longitude,6); Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher'; Timestamp = Get-Date }
             if ($UseCache) { $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp } }
+            $watcher.Stop() | Out-Null
             return $result
         }
+        $watcher.Stop() | Out-Null
         return @{ Success = $false; Error = 'Empty coordinates returned'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
     }
     catch {
