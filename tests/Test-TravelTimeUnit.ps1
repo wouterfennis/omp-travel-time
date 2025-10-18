@@ -91,10 +91,10 @@ Test-Function "Test-ActiveHours - Basic Logic" {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
         
         # Test time within range
-        $result1 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00" -CurrentTime ([DateTime]::Parse("2025-01-01 12:00"))
+        $result1 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00"
         
         # Test time outside range
-        $result2 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00" -CurrentTime ([DateTime]::Parse("2025-01-01 20:00"))
+        $result2 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00"
         
         return ($result1 -eq $true -and $result2 -eq $false)
     }
