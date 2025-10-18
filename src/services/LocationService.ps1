@@ -10,17 +10,15 @@
     accuracy and reliability.
 #>
 
-# Import location providers
-. "$PSScriptRoot\..\providers\LocationProviders.ps1"
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
+. "$PSScriptRoot\LocationService.WinRT.ps1"
 
 # Global location service configuration
+## Configuration retained only for minimal caching semantics.
 $script:LocationConfig = @{
-    PreferredProviders = @("Windows", "GPS", "IP", "Address")
-    EnableHybrid = $true
     CacheResults = $true
-    CacheExpiryMinutes = 10
+    CacheExpiryMinutes = 5
 }
 
 $script:LocationCache = @{}
@@ -67,8 +65,6 @@ function Get-CurrentLocation {
         $location = Get-CurrentLocation -ProviderType "Windows" -ForceRefresh
     #>
     param(
-        [ValidateSet("IP", "Windows", "GPS", "Address", "Hybrid", "Auto")]
-        [string]$ProviderType = "Auto",
         [bool]$UseCache = $true,
         [switch]$ForceRefresh
     )
@@ -84,63 +80,18 @@ function Get-CurrentLocation {
     }
     
     try {
-        # Get travel configuration for provider settings
-        $travelConfig = Get-TravelTimeConfig -ErrorAction SilentlyContinue
-        
-        # Update provider preferences from config
-        if ($travelConfig -and $travelConfig.location_providers) {
-            $script:LocationConfig.PreferredProviders = $travelConfig.location_providers.preferred_order
-            $script:LocationConfig.EnableHybrid = $travelConfig.location_providers.enable_hybrid
-        }
-        
-        # Determine which providers to try
-        $providersToTry = if ($ProviderType -eq "Auto") {
-            if ($script:LocationConfig.EnableHybrid) { @("Hybrid") }
-            else { $script:LocationConfig.PreferredProviders }
-        } else {
-            @($ProviderType)
-        }
-        
-        # Try each provider in order
-        foreach ($providerName in $providersToTry) {
-            try {
-                Write-Verbose "Attempting location detection with provider: $providerName"
-                
-                $provider = Get-ConfiguredLocationProvider -ProviderType $providerName -Config $travelConfig
-                if ($provider -and $provider.IsAvailable()) {
-                    $result = $provider.GetLocation()
-                    
-                    if ($result.Success) {
-                        # Add timestamp and cache result
-                        $result.Timestamp = Get-Date
-                        
-                        if ($UseCache) {
-                            $script:LocationCache["current"] = @{
-                                Location = $result
-                                Timestamp = $result.Timestamp
-                            }
-                        }
-                        
-                        Write-Verbose "Location obtained successfully via $providerName"
-                        return $result
-                    }
-                    else {
-                        Write-Verbose "Provider $providerName failed: $($result.Error)"
-                    }
-                }
-                else {
-                    Write-Verbose "Provider $providerName not available"
-                }
+        $result = Get-WindowsLocation
+        if ($result.Success) {
+            if ($UseCache) {
+                $result.Timestamp = Get-Date
+                $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp }
             }
-            catch {
-                Write-Verbose "Provider $providerName threw exception: $($_.Exception.Message)"
-                continue
-            }
+            return $result
         }
-        
-        # All providers failed - return legacy IP lookup as final fallback
-        Write-Warning "All enhanced providers failed, falling back to legacy IP lookup"
-        return Get-LegacyIPLocation
+        else {
+            Write-Warning "Windows Location unavailable: $($result.Error)"
+            return $result
+        }
     }
     catch {
         Write-Warning "Location detection failed: $($_.Exception.Message)"
@@ -209,27 +160,6 @@ function Get-ConfiguredLocationProvider {
     }
 }
 
-function Get-LegacyIPLocation {
-    <#
-    .SYNOPSIS
-        Legacy IP-based location lookup (original implementation as fallback).
-    #>
-    try {
-        # Using ip-api.com free service (1000 requests/month)
-        $response = Invoke-RestMethod -Uri "https://ip-api.com/json/" -TimeoutSec 10
-        if ($response.status -eq "success") {
-            return New-LocationResult -Latitude $response.lat -Longitude $response.lon -City $response.city -Region $response.regionName -Country $response.country -Success $true -Method "IP-Legacy"
-        }
-        else {
-            throw "Geolocation service returned: $($response.status)"
-        }
-    }
-    catch {
-        # Return location unavailable status instead of fallback location
-        Write-Warning "Could not get current location: $_"
-        return New-LocationResult -Success $false -Error $_.Exception.Message
-    }
-}
 
 function Set-LocationProviderPreferences {
     <#
@@ -273,120 +203,7 @@ function Clear-LocationCache {
     Write-Verbose "Location cache cleared"
 }
 
-function Test-LocationProviders {
-    <#
-    .SYNOPSIS
-        Tests all available location providers and returns their status.
-    
-    .OUTPUTS
-        Array of hashtables with provider test results.
-    #>
-    $results = @()
-    
-    foreach ($providerType in @("IP", "Windows", "GPS", "Address")) {
-        $result = @{
-            Provider = $providerType
-            Available = $false
-            Success = $false
-            Error = $null
-            ResponseTime = $null
-            ReliabilityScore = 0
-        }
-        
-        try {
-            $start = Get-Date
-            $provider = New-LocationProvider -Type $providerType -Config @{}
-            
-            $result.Available = $provider.IsAvailable()
-            
-            if ($result.Available) {
-                $location = $provider.GetLocation()
-                $result.Success = $location.Success
-                $result.Error = $location.Error
-                $result.ResponseTime = ((Get-Date) - $start).TotalMilliseconds
-                
-                # Calculate basic reliability score
-                if ($location.Success) {
-                    $timeScore = [math]::Max(0, 100 - ($result.ResponseTime / 50))
-                    $result.ReliabilityScore = $timeScore
-                }
-            }
-        }
-        catch {
-            $result.Error = $_.Exception.Message
-        }
-        
-        $results += $result
-    }
-    
-    return $results
-}
 
-function Get-IPLocationReliabilityReport {
-    <#
-    .SYNOPSIS
-        Generates a comprehensive reliability report for IP geolocation providers.
-    
-    .DESCRIPTION
-        Tests multiple IP providers, evaluates VPN impact, and provides
-        recommendations for optimal location detection configuration.
-    #>
-    param(
-        [int]$TestIterations = 3,
-        [switch]$IncludeVPNDetection
-    )
-    
-    Write-Host "Generating IP Location Reliability Report..." -ForegroundColor Yellow
-    
-    $report = @{
-        Timestamp = Get-Date
-        ProviderAssessments = @()
-        VPNDetection = $null
-        Recommendations = @()
-        OverallScore = 0
-    }
-    
-    # Test provider reliability
-    Write-Host "Testing IP geolocation providers..." -ForegroundColor Cyan
-    $report.ProviderAssessments = Test-IPProviderReliability -TestIterations $TestIterations
-    
-    # VPN detection if requested
-    if ($IncludeVPNDetection) {
-        Write-Host "Testing for VPN usage..." -ForegroundColor Cyan
-        $report.VPNDetection = Test-VPNDetection
-    }
-    
-    # Generate recommendations
-    if ($report.ProviderAssessments.Count -gt 0) {
-        $bestProvider = $report.ProviderAssessments | Sort-Object ReliabilityScore -Descending | Select-Object -First 1
-        $report.OverallScore = $bestProvider.ReliabilityScore
-        
-        $report.Recommendations += "Best performing IP provider: $($bestProvider.Provider) (Score: $($bestProvider.ReliabilityScore))"
-        
-        # Filter reliable providers (score > 70)
-        $reliableProviders = $report.ProviderAssessments | Where-Object { $_.ReliabilityScore -gt 70 }
-        if ($reliableProviders.Count -gt 1) {
-            $providerList = ($reliableProviders | Select-Object -First 3 | ForEach-Object { Split-Path $_.Provider -Leaf }) -join ", "
-            $report.Recommendations += "Recommended provider list: $providerList"
-        }
-        
-        # Warn about poor performers
-        $poorProviders = $report.ProviderAssessments | Where-Object { $_.ReliabilityScore -lt 50 }
-        if ($poorProviders.Count -gt 0) {
-            foreach ($poor in $poorProviders) {
-                $report.Recommendations += "Consider removing unreliable provider: $($poor.Provider) (Score: $($poor.ReliabilityScore))"
-            }
-        }
-    }
-    
-    # VPN-related recommendations
-    if ($report.VPNDetection -and $report.VPNDetection.VPNDetected) {
-        $report.Recommendations += "VPN detected (Confidence: $($report.VPNDetection.Confidence)%) - consider using Windows Location Services or GPS coordinates for better accuracy"
-        $report.Recommendations += "VPN indicators: $($report.VPNDetection.Reasons -join '; ')"
-    }
-    
-    return $report
-}
 
 
 

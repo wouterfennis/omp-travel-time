@@ -103,52 +103,6 @@ function Get-MockTravelTimeProvider {
     }
 }
 
-function New-AlternativeLocationProvider {
-    <#
-    .SYNOPSIS
-        Creates a new location provider using an alternative geolocation service.
-    
-    .DESCRIPTION
-        Demonstrates how to implement an alternative location provider.
-        This example uses ipinfo.io as an alternative to ip-api.com.
-    
-    .OUTPUTS
-        Hashtable containing location information from alternative provider.
-    
-    .EXAMPLE
-        $location = New-AlternativeLocationProvider
-    #>
-    try {
-        # Alternative using ipinfo.io (50,000 requests/month free)
-        $response = Invoke-RestMethod -Uri "https://ipinfo.io/json" -TimeoutSec 10
-        
-        if ($response.loc) {
-            $coords = $response.loc -split ','
-            return @{
-                Latitude = [double]$coords[0]
-                Longitude = [double]$coords[1] 
-                Success = $true
-                City = if ($response.city) { $response.city } else { "Unknown" }
-                Region = if ($response.region) { $response.region } else { "Unknown" }
-            }
-        }
-        else {
-            throw "No location data in response"
-        }
-    }
-    catch {
-        Write-Warning "Alternative location provider failed: $_. Using fallback."
-        # Fallback to default coordinates
-        return @{
-            Latitude = 40.7128
-            Longitude = -74.0060
-            Success = $true
-            City = "Unknown"
-            Region = "Unknown"
-        }
-    }
-}
-
 function Test-ProviderConnectivity {
     <#
     .SYNOPSIS
@@ -170,24 +124,6 @@ function Test-ProviderConnectivity {
         IpInfo = $false
         GoogleRoutes = $false
         TestTimestamp = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
-    }
-    
-    # Test ip-api.com
-    try {
-        $response = Invoke-RestMethod -Uri "https://ip-api.com/json/" -TimeoutSec 5
-        $results.IpApi = ($response.status -eq "success")
-    }
-    catch {
-        $results.IpApi = $false
-    }
-    
-    # Test ipinfo.io  
-    try {
-        $response = Invoke-RestMethod -Uri "https://ipinfo.io/json" -TimeoutSec 5
-        $results.IpInfo = ($response.loc -ne $null)
-    }
-    catch {
-        $results.IpInfo = $false
     }
     
     # Test Google Routes API endpoint (without API key, just connectivity)

@@ -15,16 +15,11 @@ showing current travel time to home with traffic-aware routing.
 - 🛡️ **Privacy-focused** with local data storage
 - ✅ **Address validation** with format and geocoding checks
 
-### Enhanced Location Detection
+### Location
 
-- 📍 **Multiple location providers** with intelligent fallback
-- 🎯 **High-accuracy positioning** using Windows Location Services
-- 🌐 **Multi-provider IP geolocation** with reliability scoring
-- 📌 **GPS coordinates** for fixed/known locations
-- 🏢 **Address geocoding** with Google Maps integration
-- 🤖 **Hybrid mode** automatically selects the best available method
-- 🔒 **VPN detection** and privacy-aware recommendations
-- ⚡ **Performance optimization** with configurable provider preferences
+- 📍 **Windows Location Services only** (high accuracy when enabled)
+- � **Privacy-respecting** (uses OS level consent)
+- 🗂️ **Local cache** (short-lived, reduces repeated queries)
 
 ## Prerequisites
 
@@ -182,7 +177,8 @@ Example configuration:
 
 ## Address Validation
 
-The system includes comprehensive address validation to ensure reliable geocoding and travel time calculations:
+The system includes comprehensive address validation to ensure reliable
+geocoding and travel time calculations:
 
 ### Validation Features
 
@@ -196,6 +192,7 @@ The system includes comprehensive address validation to ensure reliable geocodin
 ### Address Format Tips
 
 For best results, include:
+
 - Street number and name: `123 Main Street`
 - City and state: `Springfield, IL`
 - Use commas to separate components: `123 Main St, Springfield, IL 62701`
@@ -206,7 +203,8 @@ For best results, include:
 - `10 Downing Street, London SW1A 2AA, UK`
 - `PO Box 1234, Springfield, IL 62701, USA`
 
-The installation wizard automatically validates your home address and provides real-time feedback and suggestions.
+The installation wizard automatically validates your home address and provides
+real-time feedback and suggestions.
 
 For detailed information, see [Address Validation Documentation](docs/ADDRESS_VALIDATION.md).
 
@@ -230,20 +228,22 @@ logic details see `docs/travel-segment.md`.
 
 ## How It Works
 
-### 1. Enhanced Location Detection
+### 1. Location Detection
 
-The system now supports multiple location detection methods with intelligent fallback:
+The system now uses only **Windows Location Services** (WinRT Geolocator).
+No IP-based geolocation, manual GPS coordinates, or address geocoding are
+performed for origin detection.
 
-- **Windows Location Services**: High-accuracy GPS/WiFi positioning (requires consent)
-- **IP Geolocation**: Multiple providers (ip-api.com, ipapi.co, ipinfo.io) with automatic fallback
-- **GPS Coordinates**: Direct input for fixed/known locations  
-- **Address Geocoding**: Convert addresses to coordinates using Google's API
-- **Hybrid Mode**: Automatically selects the best available method
+Requirements:
+
+1. Windows Location Services enabled (Settings > Privacy & Security > Location)
+2. "Let desktop apps access your location" turned ON
+3. Consent granted to PowerShell (first use may prompt)
 
 ### 2. Travel Time Calculation
 
-- A PowerShell script runs every 5 minutes (configurable)
-- During active hours, it determines your current location using configured providers
+- A PowerShell script runs every 5 minutes (fixed)
+- During active hours, it determines your current location via Windows Location Services
 - Calls Google Routes API for travel time to your home address
 - Stores results in `data/travel_time.json`
 
@@ -336,19 +336,11 @@ Get-Content "C:\Git\omp-travel-time\data\travel_time.json" | ConvertFrom-Json
 Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
 ```
 
-### Enhanced Location Management
+### Location Management
 
-```powershell
-# Interactive location detection configuration and management
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1"
-
-# Specific actions
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Configure  # Setup wizard
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Test       # Test providers
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Optimize   # Auto-optimize
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Status     # Show status
-& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Report     # Reliability report
-```
+No separate location provider configuration is required. Ensure Windows
+Location Services are enabled. If disabled, travel time updates will mark
+location as unavailable.
 
 ### Uninstall Service
 
@@ -435,7 +427,7 @@ This project is designed to be shared as open source. To contribute:
 
 - Your API key and home address are stored locally only
 - Data files are gitignored to prevent accidental sharing
-- Location data is obtained via IP geolocation (approximate)
+- Location data is collected using Windows Location Services only
 - No personal data is transmitted except to Google Routes API
 
 ## License

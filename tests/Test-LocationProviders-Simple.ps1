@@ -2,11 +2,11 @@
 
 <#
 .SYNOPSIS
-    Simple tests for enhanced location detection providers without complex dependencies.
+    Simple tests for Windows-only location detection and location model.
 
 .DESCRIPTION
-    Tests core functionality of the new location providers to validate
-    the enhanced location detection system works correctly.
+    Validates location result model creation, Windows Location retrieval,
+    and simulated unavailable scenario.
 #>
 
 param(
@@ -17,7 +17,7 @@ param(
 # Import required modules directly
 $srcPath = Join-Path $PSScriptRoot "..\src"
 . "$srcPath\models\TravelTimeModels.ps1"
-. "$srcPath\providers\LocationProviders.ps1"
+. "$srcPath\services\LocationService.ps1"
 
 # Test statistics
 $script:TestResults = @{
@@ -69,195 +69,32 @@ try {
     Write-TestResult "Location Model" $false $_.Exception.Message
 }
 
-# Test 2: GPS Provider
-Write-Host "`nTesting GPS Provider..."
+Write-Host "`nTesting Windows Location Retrieval..."
 try {
-    $gpsConfig = @{ Latitude = 40.7128; Longitude = -74.0060 }
-    $gpsProvider = New-LocationProvider -Type "GPS" -Config $gpsConfig
-    Write-TestResult "GPS Provider - Creation" ($null -ne $gpsProvider)
-    
-    $gpsLocation = $gpsProvider.GetLocation()
-    Write-TestResult "GPS Provider - Get Location" $gpsLocation.Success
-    Write-TestResult "GPS Provider - Correct Coordinates" ($gpsLocation.Latitude -eq 40.7128)
-    
-    $available = $gpsProvider.IsAvailable()
-    Write-TestResult "GPS Provider - Availability Check" $available
-} catch {
-    Write-TestResult "GPS Provider" $false $_.Exception.Message
-}
-
-# Test 3: GPS Provider Validation
-Write-Host "`nTesting GPS Provider Validation..."
-try {
-    # Test valid coordinates
-    $validConfig = @{ Latitude = 40.7128; Longitude = -74.0060 }
-    $validProvider = New-LocationProvider -Type "GPS" -Config $validConfig
-    $validResult = $validProvider.GetLocation()
-    Write-TestResult "GPS Validation - Valid Coordinates" $validResult.Success
-    
-    # Test invalid latitude
-    $invalidConfig = @{ Latitude = 200; Longitude = -74.0060 }
-    $invalidProvider = New-LocationProvider -Type "GPS" -Config $invalidConfig
-    $invalidResult = $invalidProvider.GetLocation()
-    Write-TestResult "GPS Validation - Invalid Latitude Rejection" (-not $invalidResult.Success)
-    
-    # Test invalid longitude
-    $invalidConfig2 = @{ Latitude = 40.7128; Longitude = 200 }
-    $invalidProvider2 = New-LocationProvider -Type "GPS" -Config $invalidConfig2
-    $invalidResult2 = $invalidProvider2.GetLocation()
-    Write-TestResult "GPS Validation - Invalid Longitude Rejection" (-not $invalidResult2.Success)
-} catch {
-    Write-TestResult "GPS Provider Validation" $false $_.Exception.Message
-}
-
-# Test 4: IP Provider (without network calls)
-Write-Host "`nTesting IP Provider Structure..."
-try {
-    $ipProvider = New-LocationProvider -Type "IP" -Config @{}
-    Write-TestResult "IP Provider - Creation" ($null -ne $ipProvider)
-    Write-TestResult "IP Provider - Has GetLocation Method" ($null -ne $ipProvider.PSObject.Methods["GetLocation"])
-    Write-TestResult "IP Provider - Has IsAvailable Method" ($null -ne $ipProvider.PSObject.Methods["IsAvailable"])
-} catch {
-    Write-TestResult "IP Provider Structure" $false $_.Exception.Message
-}
-
-# Test 5: Windows Provider Structure
-Write-Host "`nTesting Windows Provider Structure..."
-try {
-    $windowsProvider = New-LocationProvider -Type "Windows" -Config @{}
-    Write-TestResult "Windows Provider - Creation" ($null -ne $windowsProvider)
-    Write-TestResult "Windows Provider - Requires Consent" $windowsProvider.RequiresConsent
-    Write-TestResult "Windows Provider - Has Methods" ($null -ne $windowsProvider.PSObject.Methods["GetLocation"])
-} catch {
-    Write-TestResult "Windows Provider Structure" $false $_.Exception.Message
-}
-
-# Test 6: Address Provider Structure
-Write-Host "`nTesting Address Provider Structure..."
-try {
-    $addressConfig = @{ Address = "Times Square, New York, NY"; ApiKey = "test-key" }
-    $addressProvider = New-LocationProvider -Type "Address" -Config $addressConfig
-    Write-TestResult "Address Provider - Creation" ($null -ne $addressProvider)
-    
-    # Test without API key
-    try {
-        $noKeyConfig = @{ Address = "Times Square, New York, NY" }
-        $noKeyProvider = New-LocationProvider -Type "Address" -Config $noKeyConfig
-        Write-TestResult "Address Provider - No API Key Warning" $true "Created with warning"
-    } catch {
-        Write-TestResult "Address Provider - No API Key Handling" $true "Validation works"
+    $loc = Get-CurrentLocation -UseCache $true
+    Write-TestResult "Windows Location - Retrieval" $loc.Success $loc.Error
+    if ($loc.Success) {
+        Write-TestResult "Windows Location - Coordinates Present" ($loc.ContainsKey('Latitude') -and $loc.ContainsKey('Longitude'))
     }
-} catch {
-    Write-TestResult "Address Provider Structure" $false $_.Exception.Message
-}
+} catch { Write-TestResult "Windows Location - Retrieval" $false $_.Exception.Message }
 
-# Test 7: Hybrid Provider
-Write-Host "`nTesting Hybrid Provider..."
+Write-Host "`nTesting Windows Location Unavailable (Mock)..."
 try {
-    $hybridProvider = New-LocationProvider -Type "Hybrid" -Config @{}
-    Write-TestResult "Hybrid Provider - Creation" ($null -ne $hybridProvider)
-    Write-TestResult "Hybrid Provider - Requires Consent" $hybridProvider.RequiresConsent
-    Write-TestResult "Hybrid Provider - Has AddProvider Method" ($null -ne $hybridProvider.PSObject.Methods["AddProvider"])
-    
-    # Test availability (should always be true)
-    $hybridAvailable = $hybridProvider.IsAvailable()
-    Write-TestResult "Hybrid Provider - Always Available" $hybridAvailable
-} catch {
-    Write-TestResult "Hybrid Provider" $false $_.Exception.Message
-}
-
-# Test 8: Provider Configuration Validation
-Write-Host "`nTesting Provider Configuration Validation..."
-try {
-    # GPS provider without coordinates should fail validation
-    try {
-        $emptyGpsProvider = New-LocationProvider -Type "GPS" -Config @{}
-        Write-TestResult "Config Validation - Empty GPS Config" $false "Should have thrown exception"
-    } catch {
-        Write-TestResult "Config Validation - Empty GPS Config" $true "Validation works"
+    if (Get-Command Get-WindowsLocation -ErrorAction SilentlyContinue) {
+        $original = (Get-Command Get-WindowsLocation).ScriptBlock
+        function Get-WindowsLocation { return @{ Success = $false; Error = 'Simulated unavailable'; Method = 'Windows' } }
+        $failLoc = Get-CurrentLocation -ForceRefresh
+        Write-TestResult "Windows Location - Unavailable Mock" (-not $failLoc.Success) $failLoc.Error
+        Remove-Item function:Get-WindowsLocation -ErrorAction SilentlyContinue
+        Set-Item -Path function:Get-WindowsLocation -Value $original
+    } else {
+        Write-TestSkipped "Windows Location - Unavailable Mock" "Function not found"
     }
-    
-    # Address provider without address should fail validation  
-    try {
-        $emptyAddressProvider = New-LocationProvider -Type "Address" -Config @{}
-        Write-TestResult "Config Validation - Empty Address Config" $false "Should have thrown exception"
-    } catch {
-        Write-TestResult "Config Validation - Empty Address Config" $true "Validation works"
-    }
-} catch {
-    Write-TestResult "Provider Configuration Validation" $false $_.Exception.Message
-}
-
-# Test 9: Location Distance Calculation
-Write-Host "`nTesting Location Distance Calculation..."
-try {
-    # Test same location (should be 0)
-    $sameDistance = Get-LocationDistance -Lat1 40.7128 -Lng1 -74.0060 -Lat2 40.7128 -Lng2 -74.0060
-    Write-TestResult "Distance Calculation - Same Location" ($sameDistance -eq 0) "Distance: $sameDistance km"
-    
-    # Test known distance (New York to Philadelphia ~ 130 km)
-    $distance = Get-LocationDistance -Lat1 40.7128 -Lng1 -74.0060 -Lat2 39.9526 -Lng2 -75.1652
-    $expectedDistance = 130
-    $tolerance = 20
-    Write-TestResult "Distance Calculation - Known Distance" ([math]::Abs($distance - $expectedDistance) -lt $tolerance) "Calculated: $([math]::Round($distance, 1)) km, Expected: ~$expectedDistance km"
-} catch {
-    Write-TestResult "Location Distance Calculation" $false $_.Exception.Message
-}
-
-# Test 10: IP Response Parsing
-Write-Host "`nTesting IP Response Parsing..."
-try {
-    # Test ip-api.com response format
-    $ipApiResponse = @{
-        status = "success"
-        lat = 40.7128
-        lon = -74.0060
-        city = "New York"
-        regionName = "New York" 
-        country = "United States"
-    }
-    
-    $parsedResult = Parse-IPLocationResponse -Response $ipApiResponse -ProviderUrl "https://ip-api.com/json/"
-    Write-TestResult "IP Response Parsing - ip-api.com" $parsedResult.Success
-    Write-TestResult "IP Response Parsing - Correct Coordinates" ($parsedResult.Latitude -eq 40.7128)
-    
-    # Test ipapi.co response format
-    $ipapiResponse = @{
-        ip = "1.2.3.4"
-        latitude = 40.7128
-        longitude = -74.0060
-        city = "New York"
-        region = "New York"
-        country_name = "United States"
-    }
-    
-    $parsedResult2 = Parse-IPLocationResponse -Response $ipapiResponse -ProviderUrl "https://ipapi.co/json/"
-    Write-TestResult "IP Response Parsing - ipapi.co" $parsedResult2.Success
-} catch {
-    Write-TestResult "IP Response Parsing" $false $_.Exception.Message
-}
-
-# Test 11: Error Handling
-Write-Host "`nTesting Error Handling..."
-try {
-    # Test invalid provider type
-    try {
-        $invalidProvider = New-LocationProvider -Type "InvalidType" -Config @{}
-        Write-TestResult "Error Handling - Invalid Provider Type" $false "Should have thrown exception"
-    } catch {
-        Write-TestResult "Error Handling - Invalid Provider Type" $true "Exception correctly thrown"
-    }
-    
-    # Test empty response parsing
-    $emptyResult = Parse-IPLocationResponse -Response @{} -ProviderUrl "https://unknown-provider.com"
-    Write-TestResult "Error Handling - Unknown Provider Response" (-not $emptyResult.Success)
-} catch {
-    Write-TestResult "Error Handling" $false $_.Exception.Message
-}
+} catch { Write-TestResult "Windows Location - Unavailable Mock" $false $_.Exception.Message }
 
 # Test Summary
 Write-Host "`n" + "="*50
-Write-Host "Simple Location Provider Test Summary" -ForegroundColor Cyan
+Write-Host "Windows Location Simple Test Summary" -ForegroundColor Cyan
 Write-Host "="*50
 Write-Host "Passed:  $($script:TestResults.Passed)" -ForegroundColor Green
 Write-Host "Failed:  $($script:TestResults.Failed)" -ForegroundColor Red

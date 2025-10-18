@@ -122,7 +122,7 @@ function Get-TravelTimeRoutes {
         else {
             return @{
                 Success = $false
-                Error = "No routes found"
+                ErrorMessage = "No routes found"
             }
         }
     }
@@ -145,7 +145,7 @@ function Get-TravelTimeRoutes {
         
         return @{
             Success = $false
-            Error = $errorMessage
+            ErrorMessage = $errorMessage
         }
     }
 }
