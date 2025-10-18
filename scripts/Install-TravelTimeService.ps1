@@ -52,14 +52,14 @@ function Get-UserInput {
     )
     
     if ($Default) {
-        $input = Read-Host "$Prompt [$Default]"
-        return if ($input) { $input } else { $Default }
+        $userResponse = Read-Host "$Prompt [$Default]"
+        return if ($userResponse) { $userResponse } else { $Default }
     }
     else {
         do {
-            $input = Read-Host $Prompt
-        } while (-not $input)
-        return $input
+            $userResponse = Read-Host $Prompt
+        } while (-not $userResponse)
+        return $userResponse
     }
 }
 

@@ -1,6 +1,9 @@
 # Oh My Posh Travel Time Integration
 
-This project adds real-time travel time display to your Oh My Posh PowerShell prompt using the Google Routes API. The travel time segment appears in your prompt during configured hours, showing current travel time to home with traffic-aware routing.
+This project adds real-time travel time display to your
+Oh My Posh PowerShell prompt using the Google Routes API.
+The travel time segment appears in your prompt during configured hours,
+showing current travel time to home with traffic-aware routing.
 
 ## Features
 
@@ -20,13 +23,14 @@ This project adds real-time travel time display to your Oh My Posh PowerShell pr
 
 ## Testing Before Installation
 
-**🧪 It's highly recommended to run the test suite before installation to ensure everything works correctly on your system.**
+🧪 It is recommended to run the test suite before installation to ensure
+everything works correctly on your system.
 
 ### Quick Test Run
 
 ```powershell
 # Navigate to your project directory
-cd C:\Git\cli-tag
+cd C:\Git\omp-travel-time
 
 # Run all tests (no API key required for basic tests)
 .\tests\Run-AllTests.ps1
@@ -83,7 +87,10 @@ If all tests pass, you're ready to proceed with installation!
 4. Create credentials (API key)
 5. Optionally restrict the API key to Routes API for security
 
-**Important**: The Routes API has usage limits and costs. See [Google's pricing](https://developers.google.com/maps/documentation/routes/usage-and-billing) for details.
+**Important**: The Routes API has usage limits and costs.
+See
+[Google's pricing](https://developers.google.com/maps/documentation/routes/usage-and-billing)
+for details.
 
 ### 2. Install the Service
 
@@ -91,7 +98,7 @@ Run the installation script as Administrator:
 
 ```powershell
 # Navigate to your project directory
-cd C:\Git\cli-tag
+cd C:\Git\omp-travel-time
 
 # Run the installer (will prompt for configuration)
 .\scripts\Install-TravelTimeService.ps1
@@ -100,7 +107,8 @@ cd C:\Git\cli-tag
 Or install with parameters:
 
 ```powershell
-.\scripts\Install-TravelTimeService.ps1 -GoogleMapsApiKey "YOUR_API_KEY" -HomeAddress "123 Main St, City, State" -StartTime "15:00" -EndTime "23:00"
+./scripts/Install-TravelTimeService.ps1 -GoogleMapsApiKey "YOUR_API_KEY" `
+  -HomeAddress "123 Main St, City, State" -StartTime "15:00" -EndTime "23:00"
 ```
 
 ### 3. Reload Your PowerShell Profile
@@ -111,12 +119,29 @@ Or install with parameters:
 
 ## Configuration
 
+### Markdownlint (Documentation Quality)
+
+To run documentation lint checks locally install markdownlint-cli globally:
+
+```powershell
+npm install -g markdownlint-cli
+```
+
+Or use the provided script with on-demand npx resolution:
+
+```powershell
+./scripts/Run-MarkdownLint.ps1 -UseNpx
+```
+
+The script automatically falls back to `npx markdownlint` if a global
+installation is not found.
+
 ### Installation Parameters
 
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `GoogleMapsApiKey` | Your Google Routes API key | *Required* | `"AIza..."` |
-| `HomeAddress` | Your home address for calculations | *Required* | `"123 Main St, City, State"` |
+| `HomeAddress` | Your home address | *Required* | `"123 Main St, City, State"` |
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
 | `IntervalMinutes` | Update frequency in minutes | `5` | `10` |
@@ -148,15 +173,19 @@ Example configuration:
 
 ### Modular Design
 
-The system uses a clean, modular architecture with production logic organized in the `src/` folder:
+The system uses a clean, modular architecture with production logic organized
+in the `src/` folder:
 
 - **Clear Separation**: Production logic is separated from scripts, tests, and configuration
-- **Organized by Function**: Related functionality is grouped into logical modules  
+- **Organized by Function**: Related functionality is grouped into logical
+modules  
 - **Backward Compatible**: Existing scripts and interfaces continue to work unchanged
 - **Extensible**: New providers and services can be easily added
 - **Testable**: Individual modules can be tested in isolation
 
-For detailed information about the source code organization, see [Source Organization](docs/SOURCE_ORGANIZATION.md).
+For detailed information about the source code organization, see
+[Source Organization](docs/SOURCE_ORGANIZATION.md). For prompt travel segment
+logic details see `docs/travel-segment.md`.
 
 ## How It Works
 
@@ -206,7 +235,10 @@ omp-travel-time/
 └── README.md                            # This file
 ```
 
-> **Note**: The project now uses a modular architecture with production logic organized in the `src/` folder. See [Source Organization](docs/SOURCE_ORGANIZATION.md) for detailed information about the new structure.
+> **Note**: The project now uses a modular architecture with production logic
+> organized in the `src/` folder. See
+> [Source Organization](docs/SOURCE_ORGANIZATION.md) for detailed information
+> about the new structure.
 
 ## Data Format
 
@@ -236,13 +268,13 @@ Get-ScheduledTask -TaskName "OhMyPosh-TravelTime"
 ### Check Current Data
 
 ```powershell
-Get-Content "C:\Git\cli-tag\data\travel_time.json" | ConvertFrom-Json
+Get-Content "C:\Git\omp-travel-time\data\travel_time.json" | ConvertFrom-Json
 ```
 
 ### Manual Update
 
 ```powershell
-& "C:\Git\cli-tag\scripts\TravelTimeUpdater.ps1"
+& "C:\Git\omp-travel-time\scripts\TravelTimeUpdater.ps1"
 ```
 
 ### Disable Service
@@ -255,8 +287,8 @@ Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
 
 ```powershell
 Unregister-ScheduledTask -TaskName "OhMyPosh-TravelTime" -Confirm:$false
-Remove-Item "C:\Git\cli-tag\scripts\config\travel-config.json" -Force
-Remove-Item "C:\Git\cli-tag\data\travel_time.json" -Force
+Remove-Item "C:\Git\omp-travel-time\scripts\config\travel-config.json" -Force
+Remove-Item "C:\Git\omp-travel-time\data\travel_time.json" -Force
 ```
 
 ## Troubleshooting
@@ -286,7 +318,7 @@ Remove-Item "C:\Git\cli-tag\data\travel_time.json" -Force
 Run the updater manually to see detailed output:
 
 ```powershell
-& "C:\Git\cli-tag\scripts\TravelTimeUpdater.ps1" -Verbose
+& "C:\Git\omp-travel-time\scripts\TravelTimeUpdater.ps1" -Verbose
 ```
 
 ### Log Files
@@ -354,4 +386,5 @@ For issues and questions:
 
 ---
 
-**Note**: This integration requires active internet connection and uses external APIs. Monitor your usage to avoid unexpected charges.
+**Note**: This integration requires active internet connection and uses
+external APIs. Monitor your usage to avoid unexpected charges.
