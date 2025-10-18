@@ -76,14 +76,14 @@
           ]
         },
         {
-          "template": "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | replace \"\\\\\" \"/\" | hasSuffix \"/cli-tag\") }}{{ if (.Env.PWD | .File.Exists $file) }}{{ $data := $file | .File.ReadFile | fromJson }}{{ if and $data $data.is_active_hours }}{{ if eq $data.location_status \"unavailable\" }} \uf1fa ⚠️ N/A{{ else if eq $data.location_status \"inactive\" }} \uf1fa ⏸️{{ else if and $data.travel_time_minutes }} \uf1fa {{ $data.travel_time_minutes }}min{{ if eq $data.traffic_status \"heavy\" }} \uf534{{ else if eq $data.traffic_status \"moderate\" }} \uf535{{ else }} \uf7b6{{ end }}{{ else if $data.error }} \uf1fa ❌ Error{{ else }} \uf1fa ? Unknown{{ end }}{{ end }}{{ end }}{{ end }}",
+          "template": "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | .File.Exists $file) }}{{ $data := $file | .File.ReadFile | fromJson }}{{ if and $data $data.is_active_hours (ne $data.location_status \"unavailable\") }} {{ if eq $data.location_status \"inactive\" }}\uf1fa ⏸️{{ else if and $data.travel_time_minutes }} \uf1fa {{ $data.travel_time_minutes }}min{{ if eq $data.traffic_status \"heavy\" }} \uf534{{ else if eq $data.traffic_status \"moderate\" }} \uf535{{ else }} \uf7b6{{ end }}{{ else if $data.error }} \uf1fa ❌ Error{{ else }} \uf1fa ? Unknown{{ end }}{{ end }}{{ end }}",
           "foreground": "p:white",
           "powerline_symbol": "\ue0b0",
           "background": "p:blue",
           "type": "text",
           "style": "powerline",
           "background_templates": [
-            "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | replace \"\\\\\" \"/\" | hasSuffix \"/cli-tag\") }}{{ if (.Env.PWD | .File.Exists $file) }}{{ $data := $file | .File.ReadFile | fromJson }}{{ if eq $data.location_status \"unavailable\" }}p:orange{{ else if $data.error }}p:red{{ else if and $data $data.travel_time_minutes (gt $data.travel_time_minutes 30) }}p:red{{ else if and $data $data.travel_time_minutes (gt $data.travel_time_minutes 20) }}p:orange{{ end }}{{ end }}{{ end }}"
+            "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | .File.Exists $file) }}{{ $data := $file | .File.ReadFile | fromJson }}{{ if and $data $data.is_active_hours (ne $data.location_status \"unavailable\") }}{{ if $data.error }}p:red{{ else if and $data.travel_time_minutes (gt $data.travel_time_minutes 30) }}p:red{{ else if and $data.travel_time_minutes (gt $data.travel_time_minutes 20) }}p:orange{{ end }}{{ else }}transparent{{ end }}{{ end }}"
           ]
         },
         {
