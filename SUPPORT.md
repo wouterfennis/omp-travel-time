@@ -20,8 +20,8 @@ If you have questions or need assistance:
 
 ## Response Times
 
-This project is early-stage. Expect replies within **5-7 business days**.
-Responses may be faster for critical issues.
+This project is early-stage and maintained on a best-effort basis. Response
+timing varies with maintainer availability and issue criticality.
 
 ## Before Opening a Bug Report
 

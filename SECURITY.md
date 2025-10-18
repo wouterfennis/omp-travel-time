@@ -18,7 +18,8 @@ If you discover a security vulnerability:
    - Steps to reproduce
    - Potential impact
    - Suggested remediation (optional)
-3. Expect acknowledgment within 5 business days.
+3. You will receive an acknowledgment after maintainers review; response timing
+   may vary based on availability.
 
 ## Handling Process
 
