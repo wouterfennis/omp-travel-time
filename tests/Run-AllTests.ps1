@@ -231,6 +231,13 @@ Invoke-TestSuite "Integration" $TestSuites.Integration $integrationParams
 # 3. Configuration Tests
 Invoke-TestSuite "Configuration" $TestSuites.Configuration
 
+# 4. Address Validation Tests
+$addressValidationParams = @{}
+if ($TestApiKey -and -not $SkipApiTests) {
+    $addressValidationParams.TestApiKey = $TestApiKey
+}
+Invoke-TestSuite "AddressValidation" $TestSuites.AddressValidation $addressValidationParams
+
 # Calculate final results
 $OverallResults.EndTime = Get-Date
 $OverallResults.Duration = $OverallResults.EndTime - $OverallResults.StartTime

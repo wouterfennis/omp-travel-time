@@ -282,7 +282,15 @@ if ($TestResults.Failed -gt 0) {
     foreach ($test in $TestResults.Tests | Where-Object { -not $_.Passed -and -not $_.Skipped }) {
         Write-Host "  - $($test.Name)" -ForegroundColor Red
     }
-    exit 1
+    
+    return @{
+        AllPassed = $false
+        Passed = $TestResults.Passed
+        Failed = $TestResults.Failed
+        Skipped = $TestResults.Skipped
+        PassRate = $passRate
+        Tests = $TestResults.Tests
+    }
 }
 else {
     Write-Host ""
@@ -294,5 +302,13 @@ else {
             Write-Host "  - $($test.Name)" -ForegroundColor Yellow
         }
     }
-    exit 0
+    
+    return @{
+        AllPassed = $true
+        Passed = $TestResults.Passed
+        Failed = $TestResults.Failed
+        Skipped = $TestResults.Skipped
+        PassRate = $passRate
+        Tests = $TestResults.Tests
+    }
 }

@@ -10,6 +10,7 @@ This project adds real-time travel time display to your Oh My Posh PowerShell pr
 - 🎨 **Color-coded traffic status** (green/yellow/red indicators)
 - 🔄 **Automated updates** via Windows scheduled tasks
 - 🛡️ **Privacy-focused** with local data storage
+- ✅ **Address validation** with format and geocoding checks
 
 ## Prerequisites
 
@@ -116,7 +117,7 @@ Or install with parameters:
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `GoogleMapsApiKey` | Your Google Routes API key | *Required* | `"AIza..."` |
-| `HomeAddress` | Your home address for calculations | *Required* | `"123 Main St, City, State"` |
+| `HomeAddress` | Your home address for calculations (validated automatically) | *Required* | `"123 Main St, City, State"` |
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
 | `IntervalMinutes` | Update frequency in minutes | `5` | `10` |
@@ -143,6 +144,36 @@ Example configuration:
   "units": "METRIC"
 }
 ```
+
+## Address Validation
+
+The system includes comprehensive address validation to ensure reliable geocoding and travel time calculations:
+
+### Validation Features
+
+- 🔍 **Format validation** - Checks address structure, length, and content
+- 🌍 **Geocoding validation** - Verifies addresses can be found via Google's API
+- 💡 **Smart suggestions** - Provides helpful formatting tips and corrections
+- 🎯 **Google recommendations** - Offers to use Google's standardized address format
+- ⚡ **Caching** - Stores validation results to minimize API calls
+- 🔧 **Override capability** - Allows proceeding with warnings for edge cases
+
+### Address Format Tips
+
+For best results, include:
+- Street number and name: `123 Main Street`
+- City and state: `Springfield, IL`
+- Use commas to separate components: `123 Main St, Springfield, IL 62701`
+
+### Examples of Well-Formatted Addresses
+
+- `1600 Amphitheatre Parkway, Mountain View, CA 94043, USA`
+- `10 Downing Street, London SW1A 2AA, UK`
+- `PO Box 1234, Springfield, IL 62701, USA`
+
+The installation wizard automatically validates your home address and provides real-time feedback and suggestions.
+
+For detailed information, see [Address Validation Documentation](docs/ADDRESS_VALIDATION.md).
 
 ## Architecture
 
