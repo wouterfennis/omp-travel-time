@@ -15,6 +15,17 @@ showing current travel time to home with traffic-aware routing.
 - 🛡️ **Privacy-focused** with local data storage
 - ✅ **Address validation** with format and geocoding checks
 
+### Enhanced Location Detection
+
+- 📍 **Multiple location providers** with intelligent fallback
+- 🎯 **High-accuracy positioning** using Windows Location Services
+- 🌐 **Multi-provider IP geolocation** with reliability scoring
+- 📌 **GPS coordinates** for fixed/known locations
+- 🏢 **Address geocoding** with Google Maps integration
+- 🤖 **Hybrid mode** automatically selects the best available method
+- 🔒 **VPN detection** and privacy-aware recommendations
+- ⚡ **Performance optimization** with configurable provider preferences
+
 ## Prerequisites
 
 - Windows PowerShell 5.1 or newer
@@ -219,8 +230,20 @@ logic details see `docs/travel-segment.md`.
 
 ## How It Works
 
+### 1. Enhanced Location Detection
+
+The system now supports multiple location detection methods with intelligent fallback:
+
+- **Windows Location Services**: High-accuracy GPS/WiFi positioning (requires consent)
+- **IP Geolocation**: Multiple providers (ip-api.com, ipapi.co, ipinfo.io) with automatic fallback
+- **GPS Coordinates**: Direct input for fixed/known locations  
+- **Address Geocoding**: Convert addresses to coordinates using Google's API
+- **Hybrid Mode**: Automatically selects the best available method
+
+### 2. Travel Time Calculation
+
 - A PowerShell script runs every 5 minutes (configurable)
-- During active hours, it gets your current location via IP geolocation
+- During active hours, it determines your current location using configured providers
 - Calls Google Routes API for travel time to your home address
 - Stores results in `data/travel_time.json`
 
@@ -311,6 +334,20 @@ Get-Content "C:\Git\omp-travel-time\data\travel_time.json" | ConvertFrom-Json
 
 ```powershell
 Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
+```
+
+### Enhanced Location Management
+
+```powershell
+# Interactive location detection configuration and management
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1"
+
+# Specific actions
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Configure  # Setup wizard
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Test       # Test providers
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Optimize   # Auto-optimize
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Status     # Show status
+& "C:\Git\omp-travel-time\scripts\Manage-LocationDetection.ps1" -Action Report     # Reliability report
 ```
 
 ### Uninstall Service
