@@ -149,7 +149,7 @@ function Test-AddressGeocoding {
         FormattedAddress = $null
         Issues = @()
         Suggestions = @()
-        Error = $null
+        ErrorMessage = $null
     }
     
     # Check cache first if enabled
@@ -160,7 +160,7 @@ function Test-AddressGeocoding {
     
     # Validate API key
     if ([string]::IsNullOrWhiteSpace($ApiKey)) {
-        $result.Error = "API key is required for geocoding validation"
+        $result.ErrorMessage = "API key is required for geocoding validation"
         $result.Issues += "Cannot validate address without API key"
         $result.Suggestions += "Provide a valid Google Maps API key"
         return $result
@@ -216,37 +216,37 @@ function Test-AddressGeocoding {
                 }
             }
             else {
-                $result.Error = "Invalid coordinates returned from geocoding service"
+                $result.ErrorMessage = "Invalid coordinates returned from geocoding service"
                 $result.Issues += "Coordinates are outside valid ranges"
             }
         }
         elseif ($response.status -eq "ZERO_RESULTS") {
-            $result.Error = "Address not found"
+            $result.ErrorMessage = "Address not found"
             $result.Issues += "No results found for this address"
             $result.Suggestions += "Check spelling and include more location details (city, state, country)"
         }
         elseif ($response.status -eq "OVER_QUERY_LIMIT") {
-            $result.Error = "API quota exceeded"
+            $result.ErrorMessage = "API quota exceeded"
             $result.Issues += "Geocoding API quota exceeded"
             $result.Suggestions += "Wait before trying again or check API quotas"
         }
         elseif ($response.status -eq "REQUEST_DENIED") {
-            $result.Error = "API request denied"
+            $result.ErrorMessage = "API request denied"
             $result.Issues += "Geocoding API request denied"
             $result.Suggestions += "Check API key permissions and billing"
         }
         elseif ($response.status -eq "INVALID_REQUEST") {
-            $result.Error = "Invalid request"
+            $result.ErrorMessage = "Invalid request"
             $result.Issues += "Invalid geocoding request"
             $result.Suggestions += "Check address format and try again"
         }
         else {
-            $result.Error = "Unknown geocoding error: $($response.status)"
+            $result.ErrorMessage = "Unknown geocoding error: $($response.status)"
             $result.Issues += "Unexpected error from geocoding service"
         }
     }
     catch {
-        $result.Error = "Network error: $($_.Exception.Message)"
+        $result.ErrorMessage = "Network error: $($_.Exception.Message)"
         $result.Issues += "Cannot connect to geocoding service"
         $result.Suggestions += "Check internet connection and try again later"
     }
@@ -344,8 +344,8 @@ function Invoke-AddressValidation {
         else {
             $result.HasWarnings = $true
             $result.OverallIssues += $geoResult.Issues
-            if ($geoResult.Error) {
-                $result.OverallIssues += $geoResult.Error
+            if ($geoResult.ErrorMessage) {
+                $result.OverallIssues += $geoResult.ErrorMessage
             }
         }
         

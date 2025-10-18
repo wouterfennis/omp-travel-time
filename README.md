@@ -304,7 +304,7 @@ The `travel_time.json` file contains:
   "distance_km": 15.2,
   "traffic_status": "moderate",
   "travel_mode": "DRIVE",
-  "error": null,
+  "errorMessage": null,
   "is_active_hours": true,
   "active_period": "15:00 - 23:00"
 }

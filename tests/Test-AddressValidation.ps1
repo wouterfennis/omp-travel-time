@@ -147,12 +147,12 @@ Test-AddressValidation "Geocoding Validation - Valid Address" -Skip:([string]::I
 
 Test-AddressValidation "Geocoding Validation - Invalid Address" -Skip:([string]::IsNullOrWhiteSpace($TestApiKey)) {
     $result = Test-AddressGeocoding -Address "This is definitely not a real address 123456789" -ApiKey $TestApiKey
-    return $result.IsValid -eq $false -and $result.Error -ne $null
+    return $result.IsValid -eq $false -and $result.ErrorMessage -ne $null
 }
 
 Test-AddressValidation "Geocoding Validation - No API Key" {
     $result = Test-AddressGeocoding -Address "123 Main Street" -ApiKey ""
-    return $result.IsValid -eq $false -and $result.Error -like "*API key*"
+    return $result.IsValid -eq $false -and $result.ErrorMessage -like "*API key*"
 }
 
 # Test 5: Caching Functionality

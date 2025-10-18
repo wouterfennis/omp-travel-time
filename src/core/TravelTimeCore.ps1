@@ -77,14 +77,14 @@ function Update-TravelTimeData {
                 Write-Host "Travel time updated: $($travelData.TravelTimeMinutes) minutes ($($travelData.DistanceKm) km, $($travelData.TrafficStatus) traffic)" -ForegroundColor Green
             }
             else {
-                $result.error = $travelData.Error
+                $result.error_message = $travelData.Error
                 Write-Warning "Travel time fetch failed: $($travelData.Error)"
             }
         }
         else {
             $result.location_status = "unavailable"
-            $result.error = "Could not get location: $($location.Error)"
-            Write-Warning $result.error
+            $result.error_message = "Could not get location: $($location.Error)"
+            Write-Warning $result.error_message
         }
     }
     else {
