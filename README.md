@@ -144,7 +144,6 @@ installation is not found.
 | `HomeAddress` | Your home address | *Required* | `"123 Main St, City, State"` |
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
-| `IntervalMinutes` | Update frequency in minutes | `5` | `10` |
 
 ### Configuration File
 
@@ -349,11 +348,10 @@ Modify `travel_mode` in config:
 
 ### API Optimization
 
-To reduce API calls:
+The update interval is fixed at every 5 minutes. To further reduce API calls:
 
-- Increase `update_interval_minutes`
 - Narrow the active time window
-- Use caching strategies
+- (Future) Introduce caching/backoff strategies (see TODO/backlog)
 
 ## Contributing
 
