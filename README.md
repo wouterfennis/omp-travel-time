@@ -152,6 +152,39 @@ installation is not found.
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
 
+### Active Hours Logic
+
+The system determines whether updates should run using `Test-ActiveHours`.
+
+Key behaviors:
+
+- Same-day windows (Start <= End) are inclusive of both endpoints.
+  - Example: `09:00`–`17:00` is active when current time is between 09:00 and 17:00.
+- Overnight windows (Start > End) wrap past midnight.
+  - Example: `22:00`–`06:00` is active when the time is >=22:00 OR <=06:00.
+- Invalid time formats cause the function to return `$false` (treated as
+  inactive) and can be detected via `Test-TimeFormat`.
+- Unit tests inject a deterministic time using the optional `-ReferenceTime`
+  parameter so logic can be validated regardless of the real clock.
+
+Example usages:
+
+```powershell
+# Basic same-day window
+Test-ActiveHours -StartTime "15:00" -EndTime "23:00"
+
+# Overnight window (late night into morning)
+Test-ActiveHours -StartTime "22:30" -EndTime "05:30"
+
+# Deterministic evaluation for testing
+$fixed = Get-Date "2025-01-01T03:00:00";
+Test-ActiveHours -StartTime "22:00" -EndTime "06:00" -ReferenceTime $fixed
+```
+
+If you require more complex schedules (multiple windows per day), consider
+wrapping multiple calls or extending the utility with an array-based
+configuration (future enhancement candidate).
+
 ### Configuration File
 
 After installation, configuration is stored in:

@@ -108,6 +108,56 @@ Test-Function "Test-ActiveHours - Basic Logic" {
     }
 }
 
+# Additional Test: Overnight window logic
+Test-Function "Test-ActiveHours - Overnight Window" {
+    try {
+        . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
+        # Choose a fixed reference time early morning 03:00
+        $ref = Get-Date (Get-Date -Hour 3 -Minute 0 -Second 0).ToString("o")
+        # Window spans 22:00 -> 06:00 (overnight). 03:00 should be inside
+        $inside = Test-ActiveHours -StartTime "22:00" -EndTime "06:00" -ReferenceTime $ref
+        # 12:00 should be outside
+        $noon = Get-Date (Get-Date -Hour 12 -Minute 0 -Second 0).ToString("o")
+        $outside = Test-ActiveHours -StartTime "22:00" -EndTime "06:00" -ReferenceTime $noon
+        return ($inside -and -not $outside)
+    }
+    catch { return $false }
+}
+
+# Additional Test: Invalid time formats return false
+Test-Function "Test-ActiveHours - Invalid Format" {
+    try {
+        . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
+        $ref = Get-Date
+        $bad1 = Test-ActiveHours -StartTime "AB:CD" -EndTime "23:00" -ReferenceTime $ref
+        $bad2 = Test-ActiveHours -StartTime "15:00" -EndTime "99:99" -ReferenceTime $ref
+        return (-not $bad1 -and -not $bad2)
+    }
+    catch { return $false }
+}
+
+# Additional Test: Inclusive boundary behavior (exact Start and End)
+Test-Function "Test-ActiveHours - Boundary Inclusive" {
+    try {
+        . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
+        # Synthetic window 10:00 - 10:30; probe exactly at boundaries and just outside.
+        $startRef = Get-Date -Hour 10 -Minute 0 -Second 0 -Millisecond 0
+        $endRef   = Get-Date -Hour 10 -Minute 30 -Second 0 -Millisecond 0
+        $outsideRef = Get-Date -Hour 10 -Minute 31 -Second 0 -Millisecond 0
+
+        $startHit = Test-ActiveHours -StartTime "10:00" -EndTime "10:30" -ReferenceTime $startRef
+        $endHit   = Test-ActiveHours -StartTime "10:00" -EndTime "10:30" -ReferenceTime $endRef
+        $outside  = Test-ActiveHours -StartTime "10:00" -EndTime "10:30" -ReferenceTime $outsideRef
+
+        if (-not $startHit) { Write-Host "    Boundary start (10:00) incorrectly evaluated as inactive" -ForegroundColor Yellow }
+        if (-not $endHit) { Write-Host "    Boundary end (10:30) incorrectly evaluated as inactive" -ForegroundColor Yellow }
+        if ($outside) { Write-Host "    Outside time (10:31) incorrectly evaluated as active" -ForegroundColor Yellow }
+
+        return ($startHit -and $endHit -and -not $outside)
+    }
+    catch { return $false }
+}
+
 # Test 4: Configuration Template
 Test-Function "Configuration Template - Structure" {
     $templatePath = "$PSScriptRoot\..\scripts\config\travel-config.json.template"
