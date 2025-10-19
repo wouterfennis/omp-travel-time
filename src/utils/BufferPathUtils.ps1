@@ -112,7 +112,7 @@ function Get-DefaultBufferFilePath {
         if ([string]::IsNullOrEmpty($scriptRoot)) {
             $scriptRoot = Get-Location
         }
-        $appDataPath = Join-Path $scriptRoot "..\..\data"
+        $appDataPath = Join-Path (Split-Path (Split-Path $scriptRoot -Parent) -Parent) "data"
     }
     
     return Join-Path $appDataPath $fileName
