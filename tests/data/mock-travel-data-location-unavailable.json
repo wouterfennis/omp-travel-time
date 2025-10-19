@@ -4,7 +4,7 @@
   "distance_km": null,
   "traffic_status": null,
   "travel_mode": "DRIVE",
-  "error": "Could not get location: Connection timeout",
+  "error_message": "Could not get location: Connection timeout",
   "is_active_hours": true,
   "active_period": "15:00 - 23:00",
   "location_status": "unavailable"

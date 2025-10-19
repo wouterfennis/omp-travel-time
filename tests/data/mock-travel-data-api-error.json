@@ -4,7 +4,7 @@
   "distance_km": null,
   "traffic_status": null,
   "travel_mode": "DRIVE",
-  "error": "API Error: Invalid API key",
+  "error_message": "API Error: Invalid API key",
   "is_active_hours": true,
   "active_period": "15:00 - 23:00",
   "location_status": "available"

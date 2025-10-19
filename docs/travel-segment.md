@@ -25,7 +25,7 @@ Expected (simplified) structure:
   "location_status": "active", // possible: active, inactive, unavailable
   "travel_time_minutes": 17,    // integer minutes (optional)
   "traffic_status": "moderate", // possible: heavy, moderate, light
-  "error": null                 // optional error message or boolean
+  "error_message": null                 // optional error message or boolean
 }
 ```
 
@@ -75,7 +75,7 @@ Refactored template (simplified for explanation):
     {{ if and . .is_active_hours (ne .location_status "unavailable") }}
       {{ if eq .location_status "inactive" }} ⏸️
       {{ else if and .travel_time_minutes }} {{ .travel_time_minutes }}min
-      {{ else if .error }} ❌ Error
+      {{ else if .error_message }} ❌ Error
       {{ else }} ? Unknown
       {{ end }}
     {{ end }}

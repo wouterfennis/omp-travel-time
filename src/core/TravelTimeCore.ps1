@@ -13,6 +13,7 @@
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
 . "$PSScriptRoot\..\utils\TimeUtils.ps1"
 . "$PSScriptRoot\..\services\LocationService.ps1"
+. "$PSScriptRoot\..\services\RoutingService.ps1"
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
 
 function Update-TravelTimeData {
@@ -76,14 +77,14 @@ function Update-TravelTimeData {
                 Write-Host "Travel time updated: $($travelData.TravelTimeMinutes) minutes ($($travelData.DistanceKm) km, $($travelData.TrafficStatus) traffic)" -ForegroundColor Green
             }
             else {
-                $result.error = $travelData.Error
+                $result.error_message = $travelData.Error
                 Write-Warning "Travel time fetch failed: $($travelData.Error)"
             }
         }
         else {
             $result.location_status = "unavailable"
-            $result.error = "Could not get location: $($location.Error)"
-            Write-Warning $result.error
+            $result.error_message = "Could not get location: $($location.ErrorMessage)"
+            Write-Warning $result.error_message
         }
     }
     else {

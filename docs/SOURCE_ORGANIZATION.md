@@ -1,21 +1,23 @@
 # Source Code Organization
 
-This document describes the organization of the production logic in the `src/` folder structure.
+This document describes the organization of the production
+logic in the `src/` folder structure.
 
 ## Overview
 
-The Travel Time system has been reorganized into a modular structure that separates concerns and improves maintainability. All production logic is now organized under the `src/` directory.
+The Travel Time system has been reorganized into a modular structure
+ that separates concerns and improves maintainability.
+  All production logic is now organized under the `src/` directory.
 
 ## Folder Structure
 
-```
+```text
 src/
-├── core/           # Core business logic
-├── services/       # External service integrations
+├── core/           # Core business logic (orchestration)
+├── services/       # External service integrations (Location, Routing, Address)
 ├── config/         # Configuration management
-├── utils/          # Utility functions
-├── models/         # Data models and types
-└── providers/      # Different provider implementations
+├── utils/          # Utility functions (time helpers)
+├── models/         # Data models and constructors
 ```
 
 ## Module Descriptions
@@ -25,9 +27,11 @@ src/
 Contains the main business logic that orchestrates the travel time system.
 
 **Files:**
+
 - `TravelTimeCore.ps1` - Main orchestration functions
 
 **Functions:**
+
 - `Update-TravelTimeData` - Main function that coordinates the entire update process
 - `Get-TravelTimeStatus` - Reads and validates current travel time data
 - `Initialize-TravelTimeSystem` - Sets up required directories and system initialization
@@ -37,31 +41,42 @@ Contains the main business logic that orchestrates the travel time system.
 Handles loading, validation, and management of configuration files.
 
 **Files:**
+
 - `ConfigManager.ps1` - Configuration loading and validation
 
 **Functions:**
+
 - `Get-TravelTimeConfig` - Loads and validates configuration from JSON files
 - `Test-ConfigurationFile` - Validates configuration structure and required fields
 
 ### `src/services/` - External Service Integrations
 
-Provides integration with external APIs and services.
+Location, routing (Google Routes), and address validation logic.
 
 **Files:**
-- `LocationService.ps1` - Geolocation and travel time API integrations
 
-**Functions:**
-- `Get-CurrentLocation` - IP-based geolocation using external services
-- `Get-TravelTimeRoutes` - Google Routes API integration for travel time calculations
+- `LocationService.ps1` - Windows Location Services via GeoCoordinateWatcher
+- `RoutingService.ps1` - Google Routes API integration
+- `AddressValidationService.ps1` - Local address format validation and
+  optional geocoding checks
+
+**Key Functions:**
+
+- `Get-CurrentLocation` - Retrieves current coordinates using GeoCoordinateWatcher
+- `Get-TravelTimeRoutes` - Calls Google Routes API for travel time and distance
+- `Test-AddressFormat` / `Validate-Address` (as implemented) - Validates and
+  suggests address corrections
 
 ### `src/utils/` - Utility Functions
 
 Common utility functions used throughout the system.
 
 **Files:**
+
 - `TimeUtils.ps1` - Time-related calculations and formatting
 
 **Functions:**
+
 - `Test-ActiveHours` - Determines if current time is within configured tracking hours
 - `Format-Duration` - Formats duration in minutes to human-readable strings
 - `ConvertTo-TrafficStatus` - Classifies traffic conditions based on travel time
@@ -72,46 +87,37 @@ Common utility functions used throughout the system.
 Standardized data structures and models for consistent data handling.
 
 **Files:**
+
 - `TravelTimeModels.ps1` - Data structure definitions and validation
 
 **Functions:**
+
 - `New-TravelTimeResult` - Creates standardized travel time result objects
 - `New-LocationResult` - Creates standardized location result objects
 - `New-ApiResult` - Creates standardized API response objects
 - `Test-TravelTimeResultStructure` - Validates travel time result data structure
 
-### `src/providers/` - Provider Implementations
-
-Alternative implementations for different service providers and testing scenarios.
-
-**Files:**
-- `ServiceProviders.ps1` - Alternative and mock service providers
-
-**Functions:**
-- `Get-MockLocationProvider` - Mock location provider for testing
-- `Get-MockTravelTimeProvider` - Mock travel time provider for testing
-- `New-AlternativeLocationProvider` - Alternative geolocation service implementation
-- `Test-ProviderConnectivity` - Tests connectivity to various service providers
-
 ## Module Dependencies
 
-```
+```text
 TravelTimeCore.ps1
 ├── ConfigManager.ps1
 ├── TimeUtils.ps1
 ├── LocationService.ps1
+├── RoutingService.ps1
+├── AddressValidationService.ps1
 └── TravelTimeModels.ps1
 ```
 
-The core module imports all other modules and provides the main entry points for the system.
+The core module imports all other modules and provides the main entry points for
+the system.
 
 ## Backward Compatibility
 
-The existing `scripts/TravelTimeUpdater.ps1` script has been updated to use the new modular structure while maintaining full backward compatibility:
-
-- All original function signatures are preserved
-- All existing scripts and tests continue to work unchanged
-- The module system is transparent to existing users
+The `scripts/TravelTimeUpdater.ps1` script uses the modular structure and remains
+the primary scheduled task entry point. Public function signatures consumed by tests
+and the prompt integration are unchanged. Existing update and configuration flows
+work as before.
 
 ## Usage
 
@@ -151,10 +157,10 @@ Update-TravelTimeData -ConfigPath ".\config\travel-config.json" -DataPath ".\dat
 
 ## Future Enhancements
 
-The modular structure enables several future improvements:
+Potential improvements enabled by the modular structure:
 
-1. **PowerShell Module Packaging** - Convert to proper PowerShell modules (.psm1)
-2. **Provider Plugins** - Dynamic loading of alternative service providers
-3. **Configuration Validation** - Enhanced validation with schema support
-4. **Dependency Injection** - Configurable service implementations
-5. **Unit Testing** - Comprehensive test coverage for individual modules
+1. **PowerShell Module Packaging** - Convert folders to discrete .psm1 modules
+2. **Configuration Schema** - Introduce JSON schema for config validation
+3. **Extended Location Fallback** - Persist last known good coordinates if
+  acquisition fails
+4. **Module Publishing** - Package and publish as a PowerShell Gallery module

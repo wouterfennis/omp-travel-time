@@ -15,6 +15,12 @@ showing current travel time to home with traffic-aware routing.
 - 🛡️ **Privacy-focused** with local data storage
 - ✅ **Address validation** with format and geocoding checks
 
+### Location
+
+- 📍 **Windows Location Services only** (high accuracy when enabled)
+- 🔒 **Privacy-respecting** (uses OS level consent)
+- 🗂️ **Local cache** (short-lived, reduces repeated queries)
+
 ## Prerequisites
 
 - Windows PowerShell 5.1 or newer
@@ -146,6 +152,39 @@ installation is not found.
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
 
+### Active Hours Logic
+
+The system determines whether updates should run using `Test-ActiveHours`.
+
+Key behaviors:
+
+- Same-day windows (Start <= End) are inclusive of both endpoints.
+  - Example: `09:00`–`17:00` is active when current time is between 09:00 and 17:00.
+- Overnight windows (Start > End) wrap past midnight.
+  - Example: `22:00`–`06:00` is active when the time is >=22:00 OR <=06:00.
+- Invalid time formats cause the function to return `$false` (treated as
+  inactive) and can be detected via `Test-TimeFormat`.
+- Unit tests inject a deterministic time using the optional `-ReferenceTime`
+  parameter so logic can be validated regardless of the real clock.
+
+Example usages:
+
+```powershell
+# Basic same-day window
+Test-ActiveHours -StartTime "15:00" -EndTime "23:00"
+
+# Overnight window (late night into morning)
+Test-ActiveHours -StartTime "22:30" -EndTime "05:30"
+
+# Deterministic evaluation for testing
+$fixed = Get-Date "2025-01-01T03:00:00";
+Test-ActiveHours -StartTime "22:00" -EndTime "06:00" -ReferenceTime $fixed
+```
+
+If you require more complex schedules (multiple windows per day), consider
+wrapping multiple calls or extending the utility with an array-based
+configuration (future enhancement candidate).
+
 ### Configuration File
 
 After installation, configuration is stored in:
@@ -171,7 +210,8 @@ Example configuration:
 
 ## Address Validation
 
-The system includes comprehensive address validation to ensure reliable geocoding and travel time calculations:
+The system includes comprehensive address validation to ensure reliable
+geocoding and travel time calculations:
 
 ### Validation Features
 
@@ -185,6 +225,7 @@ The system includes comprehensive address validation to ensure reliable geocodin
 ### Address Format Tips
 
 For best results, include:
+
 - Street number and name: `123 Main Street`
 - City and state: `Springfield, IL`
 - Use commas to separate components: `123 Main St, Springfield, IL 62701`
@@ -195,7 +236,8 @@ For best results, include:
 - `10 Downing Street, London SW1A 2AA, UK`
 - `PO Box 1234, Springfield, IL 62701, USA`
 
-The installation wizard automatically validates your home address and provides real-time feedback and suggestions.
+The installation wizard automatically validates your home address and provides
+real-time feedback and suggestions.
 
 For detailed information, see [Address Validation Documentation](docs/ADDRESS_VALIDATION.md).
 
@@ -219,8 +261,25 @@ logic details see `docs/travel-segment.md`.
 
 ## How It Works
 
-- A PowerShell script runs every 5 minutes (configurable)
-- During active hours, it gets your current location via IP geolocation
+### 1. Location Detection
+
+The system now uses only **Windows Location Services** via the .NET
+`GeoCoordinateWatcher` API.
+No IP-based geolocation, manual GPS coordinates, or address geocoding are
+performed for origin detection.
+
+Requirements:
+
+1. Windows Location Services enabled (Settings > Privacy & Security > Location)
+2. "Let desktop apps access your location" turned ON
+3. Consent granted to PowerShell (first use may prompt)
+4. First acquisition after a cold start may take several seconds; a short
+  polling loop (≤10s) is used.
+
+### 2. Travel Time Calculation
+
+- A PowerShell script runs every 5 minutes (fixed)
+- During active hours, it determines your current location via Windows Location Services
 - Calls Google Routes API for travel time to your home address
 - Stores results in `data/travel_time.json`
 
@@ -243,13 +302,13 @@ logic details see `docs/travel-segment.md`.
 
 ```text
 omp-travel-time/
-├── src/                                  # Production logic (new modular structure)
-│   ├── core/                            # Core business logic
-│   ├── services/                        # External service integrations
-│   ├── config/                          # Configuration management
-│   ├── utils/                           # Utility functions
-│   ├── models/                          # Data models and types
-│   └── providers/                       # Different provider implementations
+├── src/                                  # Production logic (modular)
+│   ├── core/                             # Core business logic
+│   ├── services/                         # External service integrations
+│   │                                       (Location, Routing)
+│   ├── config/                           # Configuration management
+│   ├── utils/                            # Utility helpers
+│   ├── models/                           # Data models and types
 ├── scripts/
 │   ├── Install-TravelTimeService.ps1    # Installation wizard
 │   ├── TravelTimeUpdater.ps1            # Main polling script (uses src/ modules)
@@ -281,7 +340,7 @@ The `travel_time.json` file contains:
   "distance_km": 15.2,
   "traffic_status": "moderate",
   "travel_mode": "DRIVE",
-  "error": null,
+  "errorMessage": null,
   "is_active_hours": true,
   "active_period": "15:00 - 23:00"
 }
@@ -312,6 +371,12 @@ Get-Content "C:\Git\omp-travel-time\data\travel_time.json" | ConvertFrom-Json
 ```powershell
 Disable-ScheduledTask -TaskName "OhMyPosh-TravelTime"
 ```
+
+### Location Management
+
+No separate location provider configuration is required. Ensure Windows
+Location Services are enabled. If disabled, travel time updates will mark
+location as unavailable.
 
 ### Uninstall Service
 
@@ -398,7 +463,7 @@ This project is designed to be shared as open source. To contribute:
 
 - Your API key and home address are stored locally only
 - Data files are gitignored to prevent accidental sharing
-- Location data is obtained via IP geolocation (approximate)
+- Location data is collected using Windows Location Services only
 - No personal data is transmitted except to Google Routes API
 
 ## License

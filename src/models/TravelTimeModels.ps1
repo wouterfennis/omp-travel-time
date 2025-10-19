@@ -41,7 +41,7 @@ function New-TravelTimeResult {
         distance_km = $null
         traffic_status = $null
         travel_mode = if ($Config) { $Config.travel_mode } else { "DRIVE" }
-        error = $null
+        error_message = $null
         is_active_hours = $IsActiveHours
         active_period = if ($Config) { "$($Config.start_time) - $($Config.end_time)" } else { "Not configured" }
         location_status = "unknown"
@@ -72,7 +72,7 @@ function New-LocationResult {
     .PARAMETER Success
         Boolean indicating if the location retrieval was successful.
     
-    .PARAMETER Error
+    .PARAMETER ErrorMessage
         Error message if the location retrieval failed.
     
     .OUTPUTS
@@ -85,9 +85,13 @@ function New-LocationResult {
         [double]$Latitude = 0,
         [double]$Longitude = 0,
         [string]$City = "Unknown",
-        [string]$Region = "Unknown", 
+        [string]$Region = "Unknown",
+        [string]$Country = "Unknown",
         [bool]$Success = $false,
-        [string]$Error = $null
+        [string]$ErrorMessage = $null,
+        [string]$Method = "Unknown",
+        [string]$Provider = "",
+        [double]$Accuracy = 0
     )
     
     return @{
@@ -95,8 +99,13 @@ function New-LocationResult {
         Longitude = $Longitude
         City = $City
         Region = $Region
+        Country = $Country
         Success = $Success
-        Error = $Error
+        ErrorMessage = $ErrorMessage
+        Method = $Method
+        Provider = $Provider
+        Accuracy = $Accuracy
+        Timestamp = Get-Date
     }
 }
 
@@ -127,13 +136,13 @@ function New-ApiResult {
     param(
         [bool]$Success = $false,
         [object]$Data = $null,
-        [string]$Error = $null
+        [string]$ErrorMessage = $null
     )
     
     return @{
         Success = $Success
         Data = $Data
-        Error = $Error
+        ErrorMessage = $ErrorMessage
         Timestamp = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
 }
@@ -168,7 +177,7 @@ function Test-TravelTimeResultStructure {
         'distance_km', 
         'traffic_status',
         'travel_mode',
-        'error',
+        'error_message',
         'is_active_hours',
         'active_period',
         'location_status'

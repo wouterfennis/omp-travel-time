@@ -167,7 +167,7 @@ Test-Integration "Data File Read/Write" {
             distance_km = 20.5
             traffic_status = "moderate"
             travel_mode = "DRIVE"
-            error = $null
+            error_message = $null
             is_active_hours = $true
             active_period = "15:00 - 23:00"
         }
