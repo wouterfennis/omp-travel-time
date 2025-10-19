@@ -1,14 +1,17 @@
 # Source Code Organization
 
-This document describes the organization of the production logic in the `src/` folder structure.
+This document describes the organization of the production
+logic in the `src/` folder structure.
 
 ## Overview
 
-The Travel Time system has been reorganized into a modular structure that separates concerns and improves maintainability. All production logic is now organized under the `src/` directory.
+The Travel Time system has been reorganized into a modular structure
+ that separates concerns and improves maintainability.
+  All production logic is now organized under the `src/` directory.
 
 ## Folder Structure
 
-```
+```text
 src/
 ├── core/           # Core business logic (orchestration)
 ├── services/       # External service integrations (Location, Routing, Address)
@@ -24,9 +27,11 @@ src/
 Contains the main business logic that orchestrates the travel time system.
 
 **Files:**
+
 - `TravelTimeCore.ps1` - Main orchestration functions
 
 **Functions:**
+
 - `Update-TravelTimeData` - Main function that coordinates the entire update process
 - `Get-TravelTimeStatus` - Reads and validates current travel time data
 - `Initialize-TravelTimeSystem` - Sets up required directories and system initialization
@@ -36,9 +41,11 @@ Contains the main business logic that orchestrates the travel time system.
 Handles loading, validation, and management of configuration files.
 
 **Files:**
+
 - `ConfigManager.ps1` - Configuration loading and validation
 
 **Functions:**
+
 - `Get-TravelTimeConfig` - Loads and validates configuration from JSON files
 - `Test-ConfigurationFile` - Validates configuration structure and required fields
 
@@ -89,7 +96,6 @@ Standardized data structures and models for consistent data handling.
 - `New-LocationResult` - Creates standardized location result objects
 - `New-ApiResult` - Creates standardized API response objects
 - `Test-TravelTimeResultStructure` - Validates travel time result data structure
-
 
 ## Module Dependencies
 
