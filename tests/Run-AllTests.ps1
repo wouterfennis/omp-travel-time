@@ -29,7 +29,8 @@
 
 param(
     [string]$TestApiKey = $null,
-    [switch]$SkipApiTests = $false
+    [switch]$SkipApiTests = $false,
+    [switch]$ShowSuiteDetails
 )
 
 # Set up test environment
@@ -38,11 +39,11 @@ $TestStartTime = Get-Date
 
 # Test suite tracking
 $TestSuites = @{
-    Unit = @{ Name = "Unit Tests"; Script = "Test-TravelTimeUnit.ps1"; Status = "Pending"; Results = $null }
-    Integration = @{ Name = "Integration Tests"; Script = "Test-Integration.ps1"; Status = "Pending"; Results = $null }
-    Configuration = @{ Name = "Configuration Tests"; Script = "Test-Configuration.ps1"; Status = "Pending"; Results = $null }
-    AddressValidation = @{ Name = "Address Validation Tests"; Script = "Test-AddressValidation.ps1"; Status = "Pending"; Results = $null }
-    Location = @{ Name = "Location Tests"; Script = "Test-LocationService.ps1"; Status = "Pending"; Results = $null }
+    Unit = @{ Name = "Unit Tests"; Script = "Test-TravelTimeUnit.ps1"; Status = "Pending"; Results = $null; Reason = $null }
+    Integration = @{ Name = "Integration Tests"; Script = "Test-Integration.ps1"; Status = "Pending"; Results = $null; Reason = $null }
+    Configuration = @{ Name = "Configuration Tests"; Script = "Test-Configuration.ps1"; Status = "Pending"; Results = $null; Reason = $null }
+    AddressValidation = @{ Name = "Address Validation Tests"; Script = "Test-AddressValidation.ps1"; Status = "Pending"; Results = $null; Reason = $null }
+    Location = @{ Name = "Location Tests"; Script = "Test-LocationService.ps1"; Status = "Pending"; Results = $null; Reason = $null }
 }
 
 $OverallResults = @{
@@ -102,7 +103,10 @@ function Invoke-TestSuite {
     try {
         $startTime = Get-Date
         
-        # Execute test script; capture pipeline output and extract last hashtable (test result)
+        # Execute test script; capture pipeline output and extract LAST hashtable (test result)
+        # NOTE: Test scripts may emit multiple objects (e.g., intermediate hashtables or PSCustomObjects).
+        # We assume the final emitted hashtable represents the summary. Write-Host output does not appear
+        # in $rawOutput, so we only filter actual objects.
         if ($Parameters.Count -gt 0) {
             $rawOutput = & $scriptPath @Parameters
         } else {
@@ -124,6 +128,7 @@ function Invoke-TestSuite {
             }
             else {
                 $SuiteInfo.Status = "FAILED"
+                $SuiteInfo.Reason = "One or more tests failed"
                 Write-Host "Suite completed with failures" -ForegroundColor Red
                 $OverallResults.SuitesFailed++
             }
@@ -137,6 +142,7 @@ function Invoke-TestSuite {
         }
         else {
             $SuiteInfo.Status = "UNKNOWN"
+            $SuiteInfo.Reason = if (-not $results) { "No hashtable summary returned" } else { "Unexpected result type: $($results.GetType().Name)" }
             Write-Host "Suite completed but returned unexpected results" -ForegroundColor Yellow
             $OverallResults.SuitesFailed++
         }
@@ -254,11 +260,19 @@ Write-Host "Overall Test Results:" -ForegroundColor Cyan
 Write-Host ""
 
 foreach ($suiteName in $TestSuites.Keys) {
-    Write-SuiteStatus $TestSuites[$suiteName].Name $TestSuites[$suiteName].Status $(
-        if ($TestSuites[$suiteName].Status -eq "PASSED") { "Green" }
-        elseif ($TestSuites[$suiteName].Status -eq "FAILED") { "Red" }
+    $suite = $TestSuites[$suiteName]
+    Write-SuiteStatus $suite.Name $suite.Status $(
+        if ($suite.Status -eq "PASSED") { "Green" }
+        elseif ($suite.Status -eq "FAILED") { "Red" }
+        elseif ($suite.Status -eq "ERROR") { "Red" }
         else { "Yellow" }
     )
+    if ($ShowSuiteDetails -and $suite.Results) {
+        Write-Host ("    Passed: {0}  Failed: {1}  Skipped: {2}  Duration: {3}" -f $suite.Results.Passed, $suite.Results.Failed, ($suite.Results.Skipped | ForEach-Object { $_ } ), ($suite.Results.Duration.ToString('mm\:ss'))) -ForegroundColor Gray
+    }
+    elseif ($ShowSuiteDetails -and $suite.Status -in @('UNKNOWN','Missing','ERROR') -and $suite.Reason) {
+        Write-Host "    Reason: $($suite.Reason)" -ForegroundColor Gray
+    }
 }
 
 Write-Host ""

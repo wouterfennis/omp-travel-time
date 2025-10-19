@@ -65,8 +65,9 @@ function Get-CurrentLocation {
     }
     
     try {
-        $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
-        $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(10))
+    $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
+    # TryStart arguments: suppressPermissionPrompt=$true (do not pop UI), timeout=10s
+    $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(10))
         if (-not $started) {
             if ($watcher.Permission -eq 'Denied') {
                 try { $watcher.Dispose() } catch {}
@@ -76,8 +77,10 @@ function Get-CurrentLocation {
             return @{ Success = $false; Error = 'Location start timeout'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
-        $timeoutMs = 10000
-        $intervalMs = 100
+    # Poll for a valid coordinate. If Windows supplies stale/empty initial values, wait briefly.
+    # Timeout & interval kept modest to avoid blocking scheduled task runs.
+    $timeoutMs = 10000   # total max wait after successful start
+    $intervalMs = 100    # poll interval
         $elapsed = 0
         $location = $watcher.Position.Location
 
@@ -126,17 +129,25 @@ function Clear-LocationCache {
 function Test-LatLon {
     <#
     .SYNOPSIS
-        Validates a latitude/longitude pair.
+        Validates a latitude/longitude pair from a GeoCoordinate.
+    .DESCRIPTION
+        Returns $true only when both coordinates are doubles, non-NaN, within
+        valid ranges. Accepts objects exposing .Latitude/.Longitude (GeoCoordinate).
+    .PARAMETER Location
+        Object with Latitude/Longitude properties.
     .OUTPUTS
-        [bool]
+        [bool] indicating validity.
+    .EXAMPLE
+        if (Test-LatLon -Location $watcher.Position.Location) { 'ready' }
     #>
     param(
         [Parameter(Mandatory=$true)]$Location
     )
     if (-not $Location) { return $false }
-    $lat = $Location.Latitude
-    $lon = $Location.Longitude
-    # Must be doubles and not NaN
+    try {
+        $lat = $Location.Latitude
+        $lon = $Location.Longitude
+    } catch { return $false }
     if ($lat -isnot [double] -or $lon -isnot [double]) { return $false }
     if ([double]::IsNaN($lat) -or [double]::IsNaN($lon)) { return $false }
     if ($lat -lt -90 -or $lat -gt 90) { return $false }
