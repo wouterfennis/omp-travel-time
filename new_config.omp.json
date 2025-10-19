@@ -52,15 +52,16 @@
           "style": "powerline"
         },
         {
-          "template": "{{ $file := \"data/travel_time.json\" }}{{ if fileExists $file }}{{ $d := (readFile $file | fromJson) }}{{ if $d.is_active_hours }}{{ if eq $d.location_status \"unavailable\" }} \uf1fa ⚠️ N/A{{ else if $d.travel_time_minutes }} \uf1fa {{ $d.travel_time_minutes }}min{{ if eq $d.traffic_status \"heavy\" }} \uf534{{ else if eq $d.traffic_status \"moderate\" }} \uf535{{ else }} \uf7b6{{ end }}{{ else if $d.error_message }} \uf1fa ❌ Error{{ else }} \uf1fa ? Unknown{{ end }}{{ end }}{{ end }}",
+          "type": "command",
+          "style": "powerline",
+          "background": "p:blue",
           "foreground": "p:white",
           "powerline_symbol": "\ue0b0",
-          "background": "p:blue",
-          "type": "text",
-          "style": "powerline",
-          "background_templates": [
-            "{{ $file := \"data/travel_time.json\" }}{{ if fileExists $file }}{{ $d := (readFile $file | fromJson) }}{{ if $d.is_active_hours }}{{ if eq $d.location_status \"unavailable\" }}p:orange{{ else if $d.error_message }}p:red{{ else if and $d.travel_time_minutes (gt $d.travel_time_minutes 30) }}p:red{{ else if and $d.travel_time_minutes (gt $d.travel_time_minutes 20) }}p:orange{{ end }}{{ end }}{{ end }}"
-          ]
+          "properties": {
+            "shell": "pwsh",
+            "command": "if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'🚗 N/A'}elseif($d.travel_time_minutes){'🚗 '+$d.travel_time_minutes+'m'}elseif($d.errorMessage){'🚗 ERR'}else{'🚗 ?'}}else{''}}else{''}"
+          },
+          "template": " {{ .Output }} "
         },
         {
           "template": " \uf0e7 ",
