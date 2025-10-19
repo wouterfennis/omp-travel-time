@@ -160,6 +160,8 @@ installation is not found.
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
 | `BufferFilePath` | Custom buffer file location | OS default | `"C:\MyData\travel.json"` |
 
+> **Note:** The example value for `BufferFilePath` is a Windows absolute path.  
+> If you are on macOS or Linux, use a path appropriate for your operating system (e.g., `"/home/user/travel.json"`).
 ### Active Hours Logic
 
 The system determines whether updates should run using `Test-ActiveHours`.
