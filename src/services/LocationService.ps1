@@ -66,8 +66,7 @@ function Get-CurrentLocation {
     
     try {
         $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
-        # Use TryStart with short timeout to reduce how long OS keeps sensors active; suppress permission prompt.
-        $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(5))
+        $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(10))
         if (-not $started) {
             if ($watcher.Permission -eq 'Denied') {
                 try { $watcher.Dispose() } catch {}
@@ -77,7 +76,7 @@ function Get-CurrentLocation {
             return @{ Success = $false; Error = 'Location start timeout'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
-        $timeoutMs = 5000
+        $timeoutMs = 10000
         $intervalMs = 100
         $elapsed = 0
         $location = $watcher.Position.Location
@@ -98,7 +97,7 @@ function Get-CurrentLocation {
             return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
-        if ($location -and ($location.Latitude -is [double]) -and ($location.Longitude -is [double]) -and (-not [double]::IsNaN($location.Latitude)) -and (-not [double]::IsNaN($location.Longitude))) {
+        if ($location -and $location.Latitude -and $location.Longitude) {
             $result = @{ Success = $true; Latitude = [math]::Round($location.Latitude,6); Longitude = [math]::Round($location.Longitude,6); Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher'; Timestamp = Get-Date }
             if ($UseCache) { $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp } }
             try { $watcher.Stop() | Out-Null } catch {}
