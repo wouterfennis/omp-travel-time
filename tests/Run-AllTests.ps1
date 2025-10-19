@@ -42,6 +42,7 @@ $TestSuites = @{
     Integration = @{ Name = "Integration Tests"; Script = "Test-Integration.ps1"; Status = "Pending"; Results = $null }
     Configuration = @{ Name = "Configuration Tests"; Script = "Test-Configuration.ps1"; Status = "Pending"; Results = $null }
     AddressValidation = @{ Name = "Address Validation Tests"; Script = "Test-AddressValidation.ps1"; Status = "Pending"; Results = $null }
+    Location = @{ Name = "Location Tests"; Script = "Test-LocationService.ps1"; Status = "Pending"; Results = $null }
 }
 
 $OverallResults = @{

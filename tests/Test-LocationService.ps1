@@ -55,7 +55,7 @@ function Write-TestSkipped {
     }
 }
 
-Write-Host "`nSimple Location Provider Tests" -ForegroundColor Cyan
+Write-Host "`nLocation Service Tests" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
 
 # Test 1: Location Result Model
@@ -94,7 +94,7 @@ try {
 
 # Test Summary
 Write-Host "`n" + "="*50
-Write-Host "Windows Location Simple Test Summary" -ForegroundColor Cyan
+Write-Host "Windows Location Test Summary" -ForegroundColor Cyan
 Write-Host "="*50
 Write-Host "Passed:  $($script:TestResults.Passed)" -ForegroundColor Green
 Write-Host "Failed:  $($script:TestResults.Failed)" -ForegroundColor Red
