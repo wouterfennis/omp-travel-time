@@ -297,5 +297,3 @@ function Get-TravelTimeRoutes {
         }
     }
 }
-
-Get-CurrentLocation
