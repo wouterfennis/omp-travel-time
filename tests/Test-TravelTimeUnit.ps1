@@ -89,14 +89,19 @@ Test-Function "Get-TravelTimeConfig - Valid JSON" {
 Test-Function "Test-ActiveHours - Basic Logic" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
-        
-        # Test time within range
-        $result1 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00"
-        
-        # Test time outside range
-        $result2 = Test-ActiveHours -StartTime "09:00" -EndTime "17:00"
-        
-        return ($result1 -eq $true -and $result2 -eq $false)
+
+        # Use a deterministic reference time (current now) and construct one range
+        # that must include it and one range that must exclude it.
+        $ref = Get-Date
+        $inStart  = ($ref.AddMinutes(-30)).ToString("HH:mm")
+        $inEnd    = ($ref.AddMinutes(30)).ToString("HH:mm")
+        $outStart = ($ref.AddHours(2)).ToString("HH:mm")
+        $outEnd   = ($ref.AddHours(3)).ToString("HH:mm")
+
+        $result1 = Test-ActiveHours -StartTime $inStart -EndTime $inEnd -ReferenceTime $ref
+        $result2 = Test-ActiveHours -StartTime $outStart -EndTime $outEnd -ReferenceTime $ref
+
+        return ($result1 -and -not $result2)
     }
     catch {
         return $false

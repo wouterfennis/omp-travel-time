@@ -12,36 +12,55 @@
 function Test-ActiveHours {
     <#
     .SYNOPSIS
-        Determines if the current time is within the configured active hours.
-    
+        Determines if a reference time is within configured active hours.
+
     .DESCRIPTION
-        Compares the current time against the configured start and end times
-        to determine if travel time tracking should be active.
-    
+        Compares a (possibly injected) reference time against start and end times.
+        Supports normal same-day ranges (Start <= End) and overnight ranges
+        (when Start > End, e.g., 22:00 - 06:00 wraps past midnight).
+
     .PARAMETER StartTime
-        The start time in HH:mm format (e.g., "15:00").
-    
+        The start time in HH:mm format (e.g. "15:00").
+
     .PARAMETER EndTime
-        The end time in HH:mm format (e.g., "23:00").
-    
+        The end time in HH:mm format (e.g. "23:00").
+
+    .PARAMETER ReferenceTime
+        Optional date/time used for evaluation (defaults to current time). Enables
+        unit tests to supply a deterministic time without relying on real clock.
+
     .OUTPUTS
-        Boolean indicating if the current time is within active hours.
-    
+        [bool] indicating if ReferenceTime is within active hours.
+
     .EXAMPLE
         $isActive = Test-ActiveHours -StartTime "15:00" -EndTime "23:00"
+
+    .EXAMPLE
+        # Deterministic test injection
+        $ref = Get-Date "2025-01-01T21:30:00"; Test-ActiveHours -StartTime "22:00" -EndTime "06:00" -ReferenceTime $ref
     #>
     param(
         [string]$StartTime,
-        [string]$EndTime
+        [string]$EndTime,
+        [DateTime]$ReferenceTime = (Get-Date)
     )
-    
-    $current = Get-Date
-    $start = [DateTime]::Parse($StartTime)
-    $end = [DateTime]::Parse($EndTime)
-    
-    $currentTime = [DateTime]::Parse($current.ToString("HH:mm"))
-    
-    return ($currentTime -ge $start -and $currentTime -le $end)
+
+    # Validate format quickly; return false on invalid times
+    if (-not (Test-TimeFormat -Time $StartTime) -or -not (Test-TimeFormat -Time $EndTime)) { return $false }
+
+    # Parse only time-of-day; use TimeSpan for clean comparison
+    $startSpan = [TimeSpan]::Parse($StartTime)
+    $endSpan = [TimeSpan]::Parse($EndTime)
+    $currentSpan = $ReferenceTime.TimeOfDay
+
+    if ($startSpan -le $endSpan) {
+        # Same-day window
+        return ($currentSpan -ge $startSpan -and $currentSpan -le $endSpan)
+    }
+    else {
+        # Overnight window (e.g. 22:00 -> 06:00)
+        return ($currentSpan -ge $startSpan -or $currentSpan -le $endSpan)
+    }
 }
 
 function Format-Duration {
