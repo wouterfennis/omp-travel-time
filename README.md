@@ -235,21 +235,8 @@ The buffer file (`travel_time.json`) stores current travel time data and can be 
 
 ```json
 {
-  "buffer_file_path": ""                           // Use OS default
+  "buffer_file_path": ""
 }
-```
-
-```json
-{
-  "buffer_file_path": "C:\\MyData\\travel.json"    // Windows absolute path
-}
-```
-
-```json
-{
-  "buffer_file_path": "./data/travel_time.json"    // Relative to project
-}
-```
 
 The system automatically creates directories and validates write permissions for the specified location.
 
