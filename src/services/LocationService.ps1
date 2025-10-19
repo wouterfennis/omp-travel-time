@@ -68,9 +68,7 @@ function Get-CurrentLocation {
         $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
         # Use TryStart with short timeout to reduce how long OS keeps sensors active; suppress permission prompt.
         $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(5))
-
         if (-not $started) {
-            # Could be permission denied or timeout; check permission explicitly.
             if ($watcher.Permission -eq 'Denied') {
                 try { $watcher.Dispose() } catch {}
                 return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
@@ -79,12 +77,16 @@ function Get-CurrentLocation {
             return @{ Success = $false; Error = 'Location start timeout'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
-        # Immediately attempt to read position; if not ready yet, poll briefly but bail fast.
         $timeoutMs = 5000
         $intervalMs = 100
         $elapsed = 0
         $location = $watcher.Position.Location
-        while ((-not ($location -and $location.Latitude -and $location.Longitude)) -and $elapsed -lt $timeoutMs -and $watcher.Permission -ne 'Denied') {
+
+        while (
+            (-not ($location -and $location.Latitude -and $location.Longitude)) -and
+            $elapsed -lt $timeoutMs -and
+            $watcher.Permission -ne 'Denied'
+        ) {
             Start-Sleep -Milliseconds $intervalMs
             $elapsed += $intervalMs
             $location = $watcher.Position.Location
