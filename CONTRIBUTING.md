@@ -109,6 +109,29 @@ function Get-TravelTime {
 - Use `Write-Warning` for non-critical issues
 - Use `Write-Error` for error conditions
 
+### Encoding Policy
+
+All repository text files use UTF-8 without BOM.
+
+Rationale:
+
+1. Consistent behavior across Windows PowerShell 5.1 and PowerShell Core
+2. Avoids BOM-related edge cases in tooling and JSON parsers
+3. Cleaner diffs (no hidden first-byte changes)
+
+Guidelines:
+
+- Editors should be configured to save as UTF-8 (no BOM). See `.editorconfig`.
+- Do not introduce UTF-16 or UTF-8 BOM files unless explicitly
+   required by an external dependency.
+- Non-ASCII characters are fully supported—no extra steps needed.
+
+Exception Process:
+
+If a future external tool mandates a BOM or different encoding for a
+specific file, document the reason in the PR and add a note near the
+top of that file explaining the exception.
+
 ## 🏗️ Project Structure
 
 ```text
