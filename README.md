@@ -230,7 +230,8 @@ logic details see `docs/travel-segment.md`.
 
 ### 1. Location Detection
 
-The system now uses only **Windows Location Services** (WinRT Geolocator).
+The system now uses only **Windows Location Services** via the .NET
+`GeoCoordinateWatcher` API.
 No IP-based geolocation, manual GPS coordinates, or address geocoding are
 performed for origin detection.
 
@@ -239,6 +240,8 @@ Requirements:
 1. Windows Location Services enabled (Settings > Privacy & Security > Location)
 2. "Let desktop apps access your location" turned ON
 3. Consent granted to PowerShell (first use may prompt)
+4. First acquisition after a cold start may take several seconds; a short
+  polling loop (≤10s) is used.
 
 ### 2. Travel Time Calculation
 
@@ -266,13 +269,13 @@ Requirements:
 
 ```text
 omp-travel-time/
-├── src/                                  # Production logic (new modular structure)
-│   ├── core/                            # Core business logic
-│   ├── services/                        # External service integrations
-│   ├── config/                          # Configuration management
-│   ├── utils/                           # Utility functions
-│   ├── models/                          # Data models and types
-│   └── providers/                       # Different provider implementations
+├── src/                                  # Production logic (modular)
+│   ├── core/                             # Core business logic
+│   ├── services/                         # External service integrations
+│   │                                       (Location, Routing)
+│   ├── config/                           # Configuration management
+│   ├── utils/                            # Utility helpers
+│   ├── models/                           # Data models and types
 ├── scripts/
 │   ├── Install-TravelTimeService.ps1    # Installation wizard
 │   ├── TravelTimeUpdater.ps1            # Main polling script (uses src/ modules)
