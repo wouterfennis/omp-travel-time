@@ -12,6 +12,7 @@
 # Import required modules
 . "$PSScriptRoot\..\config\ConfigManager.ps1"
 . "$PSScriptRoot\..\utils\TimeUtils.ps1"
+. "$PSScriptRoot\..\utils\BufferPathUtils.ps1"
 . "$PSScriptRoot\..\services\LocationService.ps1"
 . "$PSScriptRoot\..\services\RoutingService.ps1"
 . "$PSScriptRoot\..\models\TravelTimeModels.ps1"
@@ -24,15 +25,25 @@ function Update-TravelTimeData {
     .DESCRIPTION
         Orchestrates the entire travel time update process including configuration loading,
         active hours checking, location retrieval, API calls, and data file writing.
+        
+        The buffer file location is determined by the following priority order:
+        1. Explicit DataPath parameter
+        2. Environment variable (OMP_TRAVEL_TIME_DATA_PATH)
+        3. Configuration file setting (buffer_file_path)
+        4. OS-specific default location
     
     .PARAMETER ConfigPath
         Path to the configuration file.
     
     .PARAMETER DataPath
-        Path where the travel time data should be written.
+        Path where the travel time data should be written. If not specified,
+        the path will be resolved using the configuration hierarchy.
     
     .EXAMPLE
         Update-TravelTimeData -ConfigPath ".\config\travel-config.json" -DataPath ".\data\travel_time.json"
+        
+    .EXAMPLE
+        Update-TravelTimeData -ConfigPath ".\config\travel-config.json"
     #>
     param(
         [string]$ConfigPath,
@@ -45,14 +56,24 @@ function Update-TravelTimeData {
         return 
     }
     
+    # Resolve buffer file path using configuration hierarchy
+    $resolvedDataPath = Get-BufferFilePath -DataPath $DataPath -Config $config
+    
+    # Validate the resolved path
+    $pathValidation = Test-BufferFilePathAccess -Path $resolvedDataPath
+    if (-not $pathValidation.IsValid) {
+        Write-Error "Buffer file path validation failed: $($pathValidation.Issues -join ', ')"
+        return
+    }
+    
+    if ($pathValidation.DirectoryCreated) {
+        Write-Host "Created buffer file directory: $(Split-Path $resolvedDataPath -Parent)" -ForegroundColor Green
+    }
+    
+    Write-Verbose "Using buffer file path: $resolvedDataPath"
+    
     # Check if we're in active hours
     $isActiveHours = Test-ActiveHours -StartTime $config.start_time -EndTime $config.end_time
-    
-    # Ensure data directory exists
-    $dataDir = Split-Path $DataPath -Parent
-    if (-not (Test-Path $dataDir)) {
-        New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
-    }
     
     # Create base result structure
     $result = New-TravelTimeResult -Config $config -IsActiveHours $isActiveHours
@@ -94,8 +115,8 @@ function Update-TravelTimeData {
     
     # Write result to file
     try {
-        $result | ConvertTo-Json -Depth 2 | Set-Content -Path $DataPath -Encoding UTF8
-        Write-Verbose "Data written to: $DataPath"
+        $result | ConvertTo-Json -Depth 2 | Set-Content -Path $resolvedDataPath -Encoding UTF8
+        Write-Verbose "Data written to: $resolvedDataPath"
     }
     catch {
         Write-Error "Failed to write data file: $_"
