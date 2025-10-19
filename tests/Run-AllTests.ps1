@@ -246,7 +246,7 @@ if ($TestApiKey -and -not $SkipApiTests) {
 }
 Invoke-TestSuite "AddressValidation" $TestSuites.AddressValidation $addressValidationParams
 
-# 5. Location Service Tests (previously not invoked)
+# 5. Location Service Tests
 Invoke-TestSuite "Location" $TestSuites.Location
 
 # Calculate final results
