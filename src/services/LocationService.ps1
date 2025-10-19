@@ -82,7 +82,7 @@ function Get-CurrentLocation {
         $location = $watcher.Position.Location
 
         while (
-            (-not ($location -and $location.Latitude -and $location.Longitude)) -and
+            (-not (Test-LatLon -Location $location)) -and
             $elapsed -lt $timeoutMs -and
             $watcher.Permission -ne 'Denied'
         ) {
@@ -97,7 +97,7 @@ function Get-CurrentLocation {
             return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
 
-        if ($location -and $location.Latitude -and $location.Longitude) {
+        if (Test-LatLon -Location $location) {
             $result = @{ Success = $true; Latitude = [math]::Round($location.Latitude,6); Longitude = [math]::Round($location.Longitude,6); Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher'; Timestamp = Get-Date }
             if ($UseCache) { $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp } }
             try { $watcher.Stop() | Out-Null } catch {}
@@ -121,6 +121,27 @@ function Clear-LocationCache {
     #>
     $script:LocationCache.Clear()
     Write-Verbose "Location cache cleared"
+}
+
+function Test-LatLon {
+    <#
+    .SYNOPSIS
+        Validates a latitude/longitude pair.
+    .OUTPUTS
+        [bool]
+    #>
+    param(
+        [Parameter(Mandatory=$true)]$Location
+    )
+    if (-not $Location) { return $false }
+    $lat = $Location.Latitude
+    $lon = $Location.Longitude
+    # Must be doubles and not NaN
+    if ($lat -isnot [double] -or $lon -isnot [double]) { return $false }
+    if ([double]::IsNaN($lat) -or [double]::IsNaN($lon)) { return $false }
+    if ($lat -lt -90 -or $lat -gt 90) { return $false }
+    if ($lon -lt -180 -or $lon -gt 180) { return $false }
+    return $true
 }
 
 function Get-TravelTimeRoutes {
@@ -263,3 +284,5 @@ function Get-TravelTimeRoutes {
         }
     }
 }
+
+Get-CurrentLocation
