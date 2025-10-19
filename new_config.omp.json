@@ -52,39 +52,16 @@
           "style": "powerline"
         },
         {
-          "properties": {
-            "branch_template": "{{ trunc 25 .Branch }}",
-            "fetch_status": true,
-            "fetch_upstream_icon": true
-          },
-          "template": " {{ if .UpstreamURL }}{{ url .UpstreamIcon .UpstreamURL }} {{ end }}{{ .HEAD }}{{if .BranchStatus }} {{ .BranchStatus }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }} ",
-          "foreground": "p:black",
-          "powerline_symbol": "\ue0b0",
-          "background": "p:green",
-          "type": "git",
+          "type": "command",
           "style": "powerline",
-          "foreground_templates": [
-            "{{ if or (.Working.Changed) (.Staging.Changed) }}p:black{{ end }}",
-            "{{ if and (gt .Ahead 0) (gt .Behind 0) }}p:white{{ end }}",
-            "{{ if gt .Ahead 0 }}p:white{{ end }}"
-          ],
-          "background_templates": [
-            "{{ if or (.Working.Changed) (.Staging.Changed) }}p:yellow{{ end }}",
-            "{{ if and (gt .Ahead 0) (gt .Behind 0) }}p:red{{ end }}",
-            "{{ if gt .Ahead 0 }}#49416D{{ end }}",
-            "{{ if gt .Behind 0 }}#7A306C{{ end }}"
-          ]
-        },
-        {
-          "template": "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | .File.Exists $file) }}{{ with ($file | .File.ReadFile | fromJson) }}{{ if and . .is_active_hours }}{{ if eq .location_status \"unavailable\" }} \uf1fa ⚠️ N/A{{ else if and .travel_time_minutes }} \uf1fa {{ .travel_time_minutes }}min{{ if eq .traffic_status \"heavy\" }} \uf534{{ else if eq .traffic_status \"moderate\" }} \uf535{{ else }} \uf7b6{{ end }}{{ else if .error_message }} \uf1fa ❌ Error{{ else }} \uf1fa ? Unknown{{ end }}{{ end }}{{ end }}{{ end }}",
+          "background": "p:blue",
           "foreground": "p:white",
           "powerline_symbol": "\ue0b0",
-          "background": "p:blue",
-          "type": "text",
-          "style": "powerline",
-          "background_templates": [
-            "{{ $file := \".\\data\\travel_time.json\" }}{{ if (.Env.PWD | .File.Exists $file) }}{{ with ($file | .File.ReadFile | fromJson) }}{{ if and . .is_active_hours }}{{ if eq .location_status \"unavailable\" }}p:orange{{ else if .error_message }}p:red{{ else if and .travel_time_minutes (gt .travel_time_minutes 30) }}p:red{{ else if and .travel_time_minutes (gt .travel_time_minutes 20) }}p:orange{{ end }}{{ end }}{{ end }}{{ end }}"
-          ]
+          "properties": {
+            "shell": "pwsh",
+            "command": "if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'🚗 N/A'}elseif($d.travel_time_minutes){'🚗 '+$d.travel_time_minutes+'m'}elseif($d.error_message){'🚗 ERR'}else{'🚗 ?'}}else{''}}else{''}"
+          },
+          "template": " {{ .Output }} "
         },
         {
           "template": " \uf0e7 ",
