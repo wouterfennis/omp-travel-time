@@ -83,7 +83,7 @@ function Update-TravelTimeData {
         }
         else {
             $result.location_status = "unavailable"
-            $result.error_message = "Could not get location: $($location.Error)"
+            $result.error_message = "Could not get location: $($location.ErrorMessage)"
             Write-Warning $result.error_message
         }
     }
