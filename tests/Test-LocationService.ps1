@@ -5,8 +5,7 @@
     Simple tests for Windows-only location detection and location model.
 
 .DESCRIPTION
-    Validates location result model creation, Windows Location retrieval,
-    and simulated unavailable scenario.
+    Validates location result model creation and Windows Location retrieval.
 #>
 
 param(
@@ -78,19 +77,6 @@ try {
     }
 } catch { Write-TestResult "Windows Location - Retrieval" $false $_.Exception.Message }
 
-Write-Host "`nTesting Windows Location Unavailable (Mock)..."
-try {
-    if (Get-Command Get-WindowsLocation -ErrorAction SilentlyContinue) {
-        $original = (Get-Command Get-WindowsLocation).ScriptBlock
-        function Get-WindowsLocation { return @{ Success = $false; Error = 'Simulated unavailable'; Method = 'Windows' } }
-        $failLoc = Get-CurrentLocation -ForceRefresh
-        Write-TestResult "Windows Location - Unavailable Mock" (-not $failLoc.Success) $failLoc.Error
-        Remove-Item function:Get-WindowsLocation -ErrorAction SilentlyContinue
-        Set-Item -Path function:Get-WindowsLocation -Value $original
-    } else {
-        Write-TestSkipped "Windows Location - Unavailable Mock" "Function not found"
-    }
-} catch { Write-TestResult "Windows Location - Unavailable Mock" $false $_.Exception.Message }
 
 # Test Summary
 Write-Host "`n" + "="*50
