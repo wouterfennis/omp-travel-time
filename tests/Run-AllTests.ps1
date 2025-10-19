@@ -102,13 +102,14 @@ function Invoke-TestSuite {
     try {
         $startTime = Get-Date
         
-        # Execute test script with parameters
+        # Execute test script; capture pipeline output and extract last hashtable (test result)
         if ($Parameters.Count -gt 0) {
-            $results = & $scriptPath @Parameters
+            $rawOutput = & $scriptPath @Parameters
+        } else {
+            $rawOutput = & $scriptPath
         }
-        else {
-            $results = & $scriptPath
-        }
+        # Some test scripts write strings (Write-Host) that don't appear in pipeline; ensure we pick a hashtable
+        $results = ($rawOutput | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1)
         
         $endTime = Get-Date
         $duration = $endTime - $startTime
@@ -238,6 +239,9 @@ if ($TestApiKey -and -not $SkipApiTests) {
     $addressValidationParams.TestApiKey = $TestApiKey
 }
 Invoke-TestSuite "AddressValidation" $TestSuites.AddressValidation $addressValidationParams
+
+# 5. Location Service Tests (previously not invoked)
+Invoke-TestSuite "Location" $TestSuites.Location
 
 # Calculate final results
 $OverallResults.EndTime = Get-Date
