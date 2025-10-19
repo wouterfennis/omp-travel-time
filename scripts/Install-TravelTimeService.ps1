@@ -316,7 +316,7 @@ function Install-TravelTimeService {
     }
     
     Write-Host "📋 Configuration Summary:" -ForegroundColor Cyan
-    Write-Host "   • API Key: $($GoogleMapsApiKey.Substring(0, 10))..." -ForegroundColor White
+    Write-Host "   • API Key: ********" -ForegroundColor White
     Write-Host "   • Home Address: $HomeAddress" -ForegroundColor White
     Write-Host "   • Active Hours: $StartTime - $EndTime" -ForegroundColor White
     if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
