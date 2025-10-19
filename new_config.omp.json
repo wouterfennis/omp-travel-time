@@ -59,7 +59,7 @@
           "powerline_symbol": "\ue0b0",
           "properties": {
             "shell": "pwsh",
-            "command": "if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'🚗 N/A'}elseif($d.travel_time_minutes){'🚗 '+$d.travel_time_minutes+'m'}elseif($d.errorMessage){'🚗 ERR'}else{'🚗 ?'}}else{''}}else{''}"
+            "command": "if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'🚗 N/A'}elseif($d.travel_time_minutes){'🚗 '+$d.travel_time_minutes+'m'}elseif($d.error_message){'🚗 ERR'}else{'🚗 ?'}}else{''}}else{''}"
           },
           "template": " {{ .Output }} "
         },
