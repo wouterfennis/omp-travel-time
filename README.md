@@ -18,7 +18,7 @@ showing current travel time to home with traffic-aware routing.
 ### Location
 
 - 📍 **Windows Location Services only** (high accuracy when enabled)
-- � **Privacy-respecting** (uses OS level consent)
+- 🔒 **Privacy-respecting** (uses OS level consent)
 - 🗂️ **Local cache** (short-lived, reduces repeated queries)
 
 ## Prerequisites
