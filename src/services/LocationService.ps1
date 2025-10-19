@@ -66,40 +66,47 @@ function Get-CurrentLocation {
     
     try {
         $watcher = New-Object System.Device.Location.GeoCoordinateWatcher
-        $null = $watcher.Start()
+        # Use TryStart with short timeout to reduce how long OS keeps sensors active; suppress permission prompt.
+        $started = $watcher.TryStart($true, [TimeSpan]::FromSeconds(5))
 
-        $timeoutMs = 7000
-        $intervalMs = 150
-        $elapsed = 0
-        $earlyLocated = $false
-        while ($elapsed -lt $timeoutMs) {
-            if ($watcher.Permission -eq 'Denied') { break }
-            if ($watcher.Status -eq 'Ready') {
-                $locTry = $watcher.Position.Location
-                if ($locTry -and $locTry.Latitude -and $locTry.Longitude) { $earlyLocated = $true; break }
+        if (-not $started) {
+            # Could be permission denied or timeout; check permission explicitly.
+            if ($watcher.Permission -eq 'Denied') {
+                try { $watcher.Dispose() } catch {}
+                return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
             }
+            try { $watcher.Dispose() } catch {}
+            return @{ Success = $false; Error = 'Location start timeout'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
+        }
+
+        # Immediately attempt to read position; if not ready yet, poll briefly but bail fast.
+        $timeoutMs = 5000
+        $intervalMs = 100
+        $elapsed = 0
+        $location = $watcher.Position.Location
+        while ((-not ($location -and $location.Latitude -and $location.Longitude)) -and $elapsed -lt $timeoutMs -and $watcher.Permission -ne 'Denied') {
             Start-Sleep -Milliseconds $intervalMs
             $elapsed += $intervalMs
+            $location = $watcher.Position.Location
         }
 
         if ($watcher.Permission -eq 'Denied') {
-            $watcher.Stop() | Out-Null
+            try { $watcher.Stop() | Out-Null } catch {}
+            try { $watcher.Dispose() } catch {}
             return @{ Success = $false; Error = 'Location permission denied'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
         }
-        if (-not $earlyLocated -and $watcher.Status -ne 'Ready') {
-            $watcher.Stop() | Out-Null
-            return @{ Success = $false; Error = 'Location timeout or not ready'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
-        }
 
-        $location = $watcher.Position.Location
-        if ($location -and $location.Latitude -and $location.Longitude) {
+        if ($location -and ($location.Latitude -is [double]) -and ($location.Longitude -is [double]) -and (-not [double]::IsNaN($location.Latitude)) -and (-not [double]::IsNaN($location.Longitude))) {
             $result = @{ Success = $true; Latitude = [math]::Round($location.Latitude,6); Longitude = [math]::Round($location.Longitude,6); Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher'; Timestamp = Get-Date }
             if ($UseCache) { $script:LocationCache['current'] = @{ Location = $result; Timestamp = $result.Timestamp } }
-            $watcher.Stop() | Out-Null
+            try { $watcher.Stop() | Out-Null } catch {}
+            try { $watcher.Dispose() } catch {}
             return $result
         }
-        $watcher.Stop() | Out-Null
-        return @{ Success = $false; Error = 'Empty coordinates returned'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
+
+        try { $watcher.Stop() | Out-Null } catch {}
+        try { $watcher.Dispose() } catch {}
+        return @{ Success = $false; Error = 'Empty or unavailable coordinates'; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
     }
     catch {
         return @{ Success = $false; Error = $_.Exception.Message; Method = 'GeoCoordinateWatcher'; Provider = 'GeoCoordinateWatcher' }
