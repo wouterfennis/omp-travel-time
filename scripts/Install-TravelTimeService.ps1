@@ -317,7 +317,7 @@ function Install-TravelTimeService {
                     $BufferFilePath = $null
                 }
             }
-        } while (-not $BufferFilePath)
+        } while ($BufferFilePath -eq $null)
         
         Write-Host ""
     }
