@@ -6,5 +6,6 @@
   "end_time": "23:00",
   "travel_mode": "DRIVE",
   "routing_preference": "TRAFFIC_AWARE",
-  "units": "METRIC"
+  "units": "METRIC",
+  "buffer_file_path": ""
 }

@@ -5,6 +5,8 @@ Oh My Posh PowerShell prompt using the Google Routes API.
 The travel time segment appears in your prompt during configured hours,
 showing current travel time to home with traffic-aware routing.
 
+![alt text](docs/images/image.png)
+
 ## Features
 
 - 🏠 **Real-time travel time** to your home address
@@ -118,6 +120,13 @@ Or install with parameters:
   -HomeAddress "123 Main St, City, State" -StartTime "15:00" -EndTime "23:00"
 ```
 
+Or install with custom buffer file location:
+
+```powershell
+./scripts/Install-TravelTimeService.ps1 -GoogleMapsApiKey "YOUR_API_KEY" `
+  -HomeAddress "123 Main St, City, State" -BufferFilePath "C:\MyData\travel.json"
+```
+
 ### 3. Reload Your PowerShell Profile
 
 ```powershell
@@ -151,6 +160,11 @@ installation is not found.
 | `HomeAddress` | Your home address | *Required* | `"123 Main St, City, State"` |
 | `StartTime` | When to start tracking (24h format) | `"15:00"` | `"14:30"` |
 | `EndTime` | When to stop tracking (24h format) | `"23:00"` | `"22:00"` |
+| `BufferFilePath` | Buffer file location | OS | `"C:\MyData\travel.json"` |
+
+> **Note:** The example value for `BufferFilePath` is a Windows absolute path.  
+> If you are on macOS or Linux,
+use a path appropriate for your operating system (e.g., `"/home/user/travel.json"`).
 
 ### Active Hours Logic
 
@@ -204,9 +218,37 @@ Example configuration:
   "end_time": "23:00",
   "travel_mode": "DRIVE",
   "routing_preference": "TRAFFIC_AWARE",
-  "units": "METRIC"
+  "units": "METRIC",
+  "buffer_file_path": ""
 }
 ```
+
+### Buffer File Location
+
+The buffer file (`travel_time.json`) stores current travel time data
+and can be configured using multiple methods in priority order:
+
+1. **Command-line parameter**: `TravelTimeUpdater.ps1 -DataPath "C:\MyData\travel.json"`
+2. **Environment variable**: Set `OMP_TRAVEL_TIME_DATA_PATH` environment variable
+3. **Configuration file**: Set `buffer_file_path` in the configuration file
+4. **OS-specific default**: Automatic location based on OS conventions
+
+#### Default Locations by OS
+
+- **Windows**: `%LOCALAPPDATA%\OhMyPosh\TravelTime\travel_time.json`
+- **Linux**: `~/.local/share/omp-travel-time/travel_time.json`
+- **macOS**: `~/Library/Application Support/OhMyPosh/TravelTime/travel_time.json`
+
+#### Configuration Examples
+
+```json
+{
+  "buffer_file_path": ""
+}
+```
+
+The system automatically creates directories
+and validates write permissions for the specified location.
 
 ## Address Validation
 

@@ -22,6 +22,9 @@
 .PARAMETER EndTime
     Time when travel time tracking should end each day (HH:MM format).
 
+.PARAMETER BufferFilePath
+    Custom path for the buffer file that stores travel time data. If not specified,
+    uses OS-specific default location.
 
 .EXAMPLE
     .\Install-TravelTimeService.ps1
@@ -40,6 +43,7 @@ param(
     [string]$HomeAddress,
     [string]$StartTime,
     [string]$EndTime,
+    [string]$BufferFilePath,
     [switch]$Plain
 )
 
@@ -85,9 +89,11 @@ function Show-Header {
 function Get-UserInput {
     param(
         [string]$Prompt,
-        [string]$Default = ""
+        [string]$Default = "",
+        [switch]$AllowEmpty
     )
 
+    # If a default is supplied, allow blank response to mean default
     if ($Default) {
         $userResponse = Read-Host "$Prompt [$Default]"
         if ([string]::IsNullOrWhiteSpace($userResponse)) {
@@ -95,8 +101,13 @@ function Get-UserInput {
         }
         return $userResponse
     }
+
     do {
         $userResponse = Read-Host $Prompt
+        # When AllowEmpty is provided, accept empty response immediately
+        if ($AllowEmpty -and [string]::IsNullOrWhiteSpace($userResponse)) {
+            return ""  # Explicit empty string return for callers that differentiate
+        }
     } while ([string]::IsNullOrWhiteSpace($userResponse))
     return $userResponse
 }
@@ -263,10 +274,64 @@ function Install-TravelTimeService {
         Write-Host ""
     }
     
+    # Import buffer path utilities for default path resolution
+    $bufferUtilsPath = "$PSScriptRoot\..\src\utils\BufferPathUtils.ps1"
+    if (Test-Path $bufferUtilsPath) {
+        . $bufferUtilsPath
+    }
+    
+    if (-not $BufferFilePath) {
+        Write-Host "💾 Buffer File Location" -ForegroundColor Yellow
+        Write-Host "   Configure where travel time data should be stored." -ForegroundColor White
+        Write-Host ""
+        
+        # Show default location
+        $defaultPath = Get-DefaultBufferFilePath
+        Write-Host "   Default location: $defaultPath" -ForegroundColor Cyan
+        Write-Host ""
+        
+        do {
+            $BufferFilePath = Get-UserInput "   Custom buffer file path (press Enter for default)" "" -AllowEmpty
+            
+            if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
+                $BufferFilePath = ""
+                Write-Host "   ✓ Using default OS-specific location" -ForegroundColor Green
+                break
+            }
+            else {
+                # Validate the custom path
+                $pathValidation = Test-BufferFilePathAccess -Path $BufferFilePath
+                if ($pathValidation.IsValid) {
+                    if ($pathValidation.DirectoryCreated) {
+                        Write-Host "   ✓ Created directory: $(Split-Path $BufferFilePath -Parent)" -ForegroundColor Green
+                    }
+                    Write-Host "   ✓ Custom buffer file path set: $BufferFilePath" -ForegroundColor Green
+                    break
+                }
+                else {
+                    Write-Host "   ❌ Invalid path:" -ForegroundColor Red
+                    foreach ($issue in $pathValidation.Issues) {
+                        Write-Host "      • $issue" -ForegroundColor Red
+                    }
+                    Write-Host ""
+                    $BufferFilePath = $null
+                }
+            }
+        } while ($BufferFilePath -eq $null)
+        
+        Write-Host ""
+    }
+    
     Write-Host "📋 Configuration Summary:" -ForegroundColor Cyan
-    Write-Host "   • API Key: $($GoogleMapsApiKey.Substring(0, 10))..." -ForegroundColor White
+    Write-Host "   • API Key: ********" -ForegroundColor White
     Write-Host "   • Home Address: $HomeAddress" -ForegroundColor White
     Write-Host "   • Active Hours: $StartTime - $EndTime" -ForegroundColor White
+    if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
+        Write-Host "   • Buffer File: Default OS location" -ForegroundColor White
+    }
+    else {
+        Write-Host "   • Buffer File: $BufferFilePath" -ForegroundColor White
+    }
     Write-Host ""
     
     $confirm = Read-Host "Continue with installation? [Y/n]"
@@ -298,6 +363,7 @@ function Install-TravelTimeService {
         travel_mode = "DRIVE"
         routing_preference = "TRAFFIC_AWARE"
         units = "METRIC"
+        buffer_file_path = $BufferFilePath
     }
     
     $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath -Encoding UTF8

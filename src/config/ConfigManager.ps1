@@ -64,6 +64,7 @@ function Test-ConfigurationFile {
         - Issues: Array of validation issues found
         - Warnings: Array of validation warnings
         - AddressValidation: Address validation results if performed
+        - BufferPathValidation: Buffer file path validation results
     
     .EXAMPLE
         $result = Test-ConfigurationFile -Config $config
@@ -78,6 +79,7 @@ function Test-ConfigurationFile {
         Issues = @()
         Warnings = @()
         AddressValidation = $null
+        BufferPathValidation = $null
     }
     
     if (-not $Config) {
@@ -103,6 +105,32 @@ function Test-ConfigurationFile {
         elseif ([string]::IsNullOrWhiteSpace($Config.$field)) {
             $result.IsValid = $false
             $result.Issues += "Empty value for required field: $field"
+        }
+    }
+    
+    # Validate buffer file path if specified
+    if ($Config.PSObject.Properties.Name -contains 'buffer_file_path' -and 
+        -not [string]::IsNullOrWhiteSpace($Config.buffer_file_path)) {
+        try {
+            # Import buffer path utilities if not already loaded
+            $bufferUtilsPath = Join-Path $PSScriptRoot "..\utils\BufferPathUtils.ps1"
+            if (Test-Path $bufferUtilsPath) {
+                . $bufferUtilsPath
+                
+                $bufferPathResult = Test-BufferFilePathAccess -Path $Config.buffer_file_path
+                $result.BufferPathValidation = $bufferPathResult
+                
+                if (-not $bufferPathResult.IsValid) {
+                    $result.IsValid = $false
+                    $result.Issues += "Buffer file path validation failed: $($bufferPathResult.Issues -join ', ')"
+                }
+            }
+            else {
+                $result.Warnings += "Buffer path utilities not found - skipping buffer path validation"
+            }
+        }
+        catch {
+            $result.Warnings += "Buffer file path validation failed: $($_.Exception.Message)"
         }
     }
     
