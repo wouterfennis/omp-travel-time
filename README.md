@@ -5,6 +5,8 @@ Oh My Posh PowerShell prompt using the Google Routes API.
 The travel time segment appears in your prompt during configured hours,
 showing current travel time to home with traffic-aware routing.
 
+![alt text](docs/images/image.png)
+
 ## Features
 
 - 🏠 **Real-time travel time** to your home address

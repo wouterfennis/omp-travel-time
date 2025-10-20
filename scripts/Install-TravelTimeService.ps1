@@ -89,9 +89,11 @@ function Show-Header {
 function Get-UserInput {
     param(
         [string]$Prompt,
-        [string]$Default = ""
+        [string]$Default = "",
+        [switch]$AllowEmpty
     )
 
+    # If a default is supplied, allow blank response to mean default
     if ($Default) {
         $userResponse = Read-Host "$Prompt [$Default]"
         if ([string]::IsNullOrWhiteSpace($userResponse)) {
@@ -99,8 +101,13 @@ function Get-UserInput {
         }
         return $userResponse
     }
+
     do {
         $userResponse = Read-Host $Prompt
+        # When AllowEmpty is provided, accept empty response immediately
+        if ($AllowEmpty -and [string]::IsNullOrWhiteSpace($userResponse)) {
+            return ""  # Explicit empty string return for callers that differentiate
+        }
     } while ([string]::IsNullOrWhiteSpace($userResponse))
     return $userResponse
 }
@@ -284,7 +291,7 @@ function Install-TravelTimeService {
         Write-Host ""
         
         do {
-            $BufferFilePath = Get-UserInput "   Custom buffer file path (press Enter for default)" ""
+            $BufferFilePath = Get-UserInput "   Custom buffer file path (press Enter for default)" "" -AllowEmpty
             
             if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
                 $BufferFilePath = ""
