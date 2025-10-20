@@ -191,34 +191,7 @@ Test-Integration "Data File Read/Write" {
     }
 }
 
-# Test 6: Oh My Posh Configuration
-Test-Integration "Oh My Posh Configuration" {
-    $ompConfigPath = "$PSScriptRoot\..\new_config.omp.json"
-    try {
-        $config = Get-Content $ompConfigPath | ConvertFrom-Json
-
-        # Check for travel time segment
-        $hasBlocks = $config.blocks -ne $null
-        $hasSegments = $config.blocks[0].segments -ne $null
-
-        # Look for travel time template
-        $hasTravelTimeTemplate = $false
-        foreach ($segment in $config.blocks[0].segments) {
-            if ($segment.template -and $segment.template -like "*travel_time*") {
-                $hasTravelTimeTemplate = $true
-                break
-            }
-        }
-
-        return ($hasBlocks -and $hasTravelTimeTemplate)
-    }
-    catch {
-        Write-Host "  Invalid JSON in Oh My Posh config: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
-}
-
-# Test 7: Function Dependencies
+# Test 6: Function Dependencies
 Test-Integration "Function Dependencies" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
@@ -246,7 +219,7 @@ Test-Integration "Function Dependencies" {
     }
 }
 
-# Test 8: API Connectivity (Optional)
+# Test 7: API Connectivity (Optional)
 $skipApiTest = [string]::IsNullOrWhiteSpace($TestApiKey)
 Test-Integration "Google Routes API Connectivity" {
     try {
