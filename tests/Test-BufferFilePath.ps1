@@ -96,8 +96,8 @@ function Test-DefaultPathGeneration {
     
     # Test path characteristics based on OS
     if ($IsWindows -or $env:OS -eq "Windows_NT") {
-        if ($defaultPath -like "*LocalApplicationData*" -or $defaultPath -like "*AppData\Local*") {
-            Write-Host "  ✓ Windows path uses LocalApplicationData" -ForegroundColor Green
+        if ($defaultPath -like "*AppData\Local*") {
+            Write-Host "  ✓ Windows path uses AppData\Local" -ForegroundColor Green
         }
         else {
             Write-Host "  ⚠️  Windows path might not follow expected convention" -ForegroundColor Yellow
