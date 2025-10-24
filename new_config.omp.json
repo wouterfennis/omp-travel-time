@@ -32,15 +32,6 @@
       "alignment": "left",
       "segments": [
         {
-          "leading_diamond": "\ue0b6",
-          "trailing_diamond": "\ue0b0",
-          "template": " {{ if .SSHSession }}\ueba9 {{ end }}{{ .UserName }} ",
-          "foreground": "p:black",
-          "background": "p:yellow",
-          "type": "session",
-          "style": "diamond"
-        },
-        {
           "properties": {
             "style": "folder"
           },
@@ -59,7 +50,7 @@
           "powerline_symbol": "\ue0b0",
           "properties": {
             "shell": "pwsh",
-            "command": "if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'🚗 N/A'}elseif($d.travel_time_minutes){'🚗 '+$d.travel_time_minutes+'m'}elseif($d.error_message){'🚗 ERR'}else{'🚗 ?'}}else{''}}else{''}"
+            "command": " \udb86 \udd74 if(Test-Path data/travel_time.json){$d=Get-Content data/travel_time.json -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'N/A'}elseif($d.travel_time_minutes){$d.travel_time_minutes+'m'}elseif($d.error_message){'ERR'}else{'?'}}else{''}}else{''}"
           },
           "template": " {{ .Output }} "
         },
@@ -70,107 +61,7 @@
           "background": "p:yellow",
           "type": "root",
           "style": "powerline"
-        },
-        {
-          "properties": {
-            "always_enabled": true
-          },
-          "leading_diamond": "<transparent,background>\ue0b0</>",
-          "trailing_diamond": "\ue0b4",
-          "template": " {{ if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} ",
-          "foreground": "p:white",
-          "background": "p:blue",
-          "type": "status",
-          "style": "diamond",
-          "background_templates": [
-            "{{ if gt .Code 0 }}p:red{{ end }}"
-          ]
         }
-      ]
-    },
-    {
-      "type": "rprompt",
-      "segments": [
-        {
-          "properties": {
-            "display_mode": "files",
-            "fetch_package_manager": false,
-            "home_enabled": false
-          },
-          "template": "\ue718 ",
-          "foreground": "p:green",
-          "background": "transparent",
-          "type": "node",
-          "style": "plain"
-        },
-        {
-          "properties": {
-            "fetch_version": false
-          },
-          "template": "\ue626 ",
-          "foreground": "p:blue",
-          "background": "transparent",
-          "type": "go",
-          "style": "plain"
-        },
-        {
-          "properties": {
-            "display_mode": "files",
-            "fetch_version": false,
-            "fetch_virtual_env": false
-          },
-          "template": "\ue235 ",
-          "foreground": "p:yellow",
-          "background": "transparent",
-          "type": "python",
-          "style": "plain"
-        },
-        {
-          "template": "in <p:blue><b>{{ .Name }}</b></> ",
-          "foreground": "p:white",
-          "background": "transparent",
-          "type": "shell",
-          "style": "plain"
-        },
-        {
-          "template": "at <p:blue><b>{{ .CurrentDate | date \"15:04:05\" }}</b></>",
-          "foreground": "p:white",
-          "background": "transparent",
-          "type": "time",
-          "style": "plain"
-        }
-      ]
-    }
-  ],
-  "tooltips": [
-    {
-      "properties": {
-        "display_default": true
-      },
-      "leading_diamond": "\ue0b0",
-      "trailing_diamond": "\ue0b4",
-      "template": " \ue7ad {{ .Profile }}{{ if .Region }}@{{ .Region }}{{ end }} ",
-      "foreground": "p:white",
-      "background": "p:orange",
-      "type": "aws",
-      "style": "diamond",
-      "tips": [
-        "aws"
-      ]
-    },
-    {
-      "properties": {
-        "display_default": true
-      },
-      "leading_diamond": "\ue0b0",
-      "trailing_diamond": "\ue0b4",
-      "template": " \uebd8 {{ .Name }} ",
-      "foreground": "p:white",
-      "background": "p:blue",
-      "type": "az",
-      "style": "diamond",
-      "tips": [
-        "az"
       ]
     }
   ],

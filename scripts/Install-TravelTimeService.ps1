@@ -317,7 +317,7 @@ function Install-TravelTimeService {
                     $BufferFilePath = $null
                 }
             }
-        } while ($BufferFilePath -eq $null)
+        } while ($null -eq $BufferFilePath)
         
         Write-Host ""
     }
@@ -385,15 +385,15 @@ function Install-TravelTimeService {
         Write-Error "Failed to remove existing scheduled task: $_"
     }
     
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
 
     # Create a minimal one-time trigger (no repetition specified here) that starts next minute.
     $startAt = (Get-Date).AddMinutes(1).AddSeconds(- (Get-Date).Second)
     $trigger = New-ScheduledTaskTrigger -Once -At $startAt
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -Hidden
 
     try {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" | Out-Null
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" -RunLevel Highest | Out-Null
         Write-Host "   ✓ Created scheduled task: $taskName" -ForegroundColor Green
     }
     catch {
