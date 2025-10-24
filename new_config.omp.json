@@ -50,7 +50,7 @@
           "powerline_symbol": "\ue0b0",
           "properties": {
             "shell": "pwsh",
-            "command": " \udb86 \udd74 $dataPath=$env:OMP_TRAVEL_TIME_DATA_PATH;if($dataPath -and (Test-Path $dataPath)){$d=Get-Content $dataPath -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'N/A'}elseif($d.travel_time_minutes){$d.travel_time_minutes+'m'}elseif($d.error_message){'ERR'}else{'?'}}else{''}}else{''}"
+            "command": "$dataPath=$env:OMP_TRAVEL_TIME_DATA_PATH;if($dataPath -and (Test-Path $dataPath)){$d=Get-Content $dataPath -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'N/A'}elseif($d.travel_time_minutes){''+$d.travel_time_minutes+'m'}elseif($d.error_message){'ERR'}else{'?'}}else{''}}else{''}"
           },
           "template": " {{ .Output }} "
         },
