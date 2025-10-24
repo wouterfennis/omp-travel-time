@@ -407,15 +407,21 @@ function Install-TravelTimeService {
         Write-Error "Failed to remove existing scheduled task: $_"
     }
     
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
+    # Create the action with explicit data path parameter to avoid environment variable issues
+    $actionArguments = "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`" -DataPath `"$finalDataPath`""
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArguments
 
     # Create a minimal one-time trigger (no repetition specified here) that starts next minute.
     $startAt = (Get-Date).AddMinutes(1).AddSeconds(- (Get-Date).Second)
     $trigger = New-ScheduledTaskTrigger -Once -At $startAt
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -Hidden
+    
+    # Create principal to run as current user (not SYSTEM)
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Highest
 
     try {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" -RunLevel Highest | Out-Null
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" | Out-Null
         Write-Host "   ✓ Created scheduled task: $taskName" -ForegroundColor Green
     }
     catch {
@@ -470,7 +476,7 @@ function Install-TravelTimeService {
     Write-Host ""
     Write-Host "🚀 Running initial travel time update..." -ForegroundColor Yellow
     try {
-        & $scriptPath
+        & $scriptPath -ConfigPath "$configPath" -DataPath "$finalDataPath"
         Write-Host "   ✓ Initial update completed successfully" -ForegroundColor Green
     }
     catch {
@@ -480,7 +486,7 @@ function Install-TravelTimeService {
     
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║                    Installation Complete!                   ║" -ForegroundColor Green
+    Write-Host "║                    Installation Complete!                    ║" -ForegroundColor Green
     Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
     Write-Host "🎯 Travel time tracking is now active from $StartTime to $EndTime daily" -ForegroundColor White

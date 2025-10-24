@@ -26,8 +26,8 @@
 #>
 
 param(
-    [string]$ConfigPath = "$PSScriptRoot\config\travel-config.json",
-    [string]$DataPath = "$PSScriptRoot\..\data\travel_time.json"
+    [string]$ConfigPath,
+    [string]$DataPath
 )
 
 # Import the core travel time module
