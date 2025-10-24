@@ -369,6 +369,11 @@ function Install-TravelTimeService {
     $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath -Encoding UTF8
     Write-Host "   ✓ Created config file: $configPath" -ForegroundColor Green
     
+    # Set environment variable for data path (resolve final path)
+    $finalDataPath = if ([string]::IsNullOrWhiteSpace($BufferFilePath)) { Get-DefaultBufferFilePath } else { $BufferFilePath }
+    [Environment]::SetEnvironmentVariable('OMP_TRAVEL_TIME_DATA_PATH', $finalDataPath, [EnvironmentVariableTarget]::User)
+    Write-Host "   ✓ Set environment variable: OMP_TRAVEL_TIME_DATA_PATH=$finalDataPath" -ForegroundColor Green
+    
     # Create scheduled task
     $taskName = "OhMyPosh-TravelTime"
     $scriptPath = "$scriptRoot\TravelTimeUpdater.ps1"
