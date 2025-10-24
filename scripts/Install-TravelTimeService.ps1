@@ -371,6 +371,23 @@ function Install-TravelTimeService {
     
     # Set environment variable for data path (resolve final path)
     $finalDataPath = if ([string]::IsNullOrWhiteSpace($BufferFilePath)) { Get-DefaultBufferFilePath } else { $BufferFilePath }
+    
+    # Ensure the buffer file directory exists
+    $dataDirectory = Split-Path $finalDataPath -Parent
+    if (-not (Test-Path $dataDirectory)) {
+        try {
+            New-Item -ItemType Directory -Path $dataDirectory -Force | Out-Null
+            Write-Host "   ✓ Created data directory: $dataDirectory" -ForegroundColor Green
+        }
+        catch {
+            Write-Error "Failed to create data directory: $dataDirectory. Error: $_"
+            return
+        }
+    }
+    else {
+        Write-Host "   ✓ Data directory exists: $dataDirectory" -ForegroundColor Green
+    }
+    
     [Environment]::SetEnvironmentVariable('OMP_TRAVEL_TIME_DATA_PATH', $finalDataPath, [EnvironmentVariableTarget]::User)
     Write-Host "   ✓ Set environment variable: OMP_TRAVEL_TIME_DATA_PATH=$finalDataPath" -ForegroundColor Green
     
