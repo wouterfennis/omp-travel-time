@@ -408,7 +408,7 @@ function Install-TravelTimeService {
     }
     
     # Create the action with explicit data path parameter to avoid environment variable issues
-    $actionArguments = "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`" -DataPath `"$finalDataPath`""
+    $actionArguments = "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`" -DataPath `"$finalDataPath`" -ConfigPath `"$configPath`""
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArguments
 
     # Create a minimal one-time trigger (no repetition specified here) that starts next minute.
