@@ -52,7 +52,7 @@
             "shell": "pwsh",
             "command": "$dataPath=$env:OMP_TRAVEL_TIME_DATA_PATH;if(-not $dataPath){$dataPath=\"$env:LOCALAPPDATA\\OhMyPosh\\TravelTime\\travel_time.json\"};if(Test-Path $dataPath){$d=Get-Content $dataPath -Raw|ConvertFrom-Json;if($d.is_active_hours){if($d.location_status -eq 'unavailable'){'N/A'}elseif($d.travel_time_minutes){''+$d.travel_time_minutes+'m'}elseif($d.error_message){'ERR'}else{'?'}}else{''}}else{''}"
           },
-          "template": " {{ .Output }} "
+          "template": "\udb86\udd74 {{ .Output }} "
         },
         {
           "template": " \uf0e7 ",
