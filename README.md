@@ -218,38 +218,9 @@ Example configuration:
   "end_time": "23:00",
   "travel_mode": "DRIVE",
   "routing_preference": "TRAFFIC_AWARE",
-  "units": "METRIC",
-  "buffer_file_path": ""
+  "units": "METRIC"
 }
 ```
-
-### Buffer File Location
-
-The buffer file (`travel_time.json`) stores current travel time data
-and can be configured using multiple methods in priority order:
-
-1. **Command-line parameter**: `TravelTimeUpdater.ps1 -DataPath "C:\MyData\travel.json"`
-2. **Environment variable**: Set `OMP_TRAVEL_TIME_DATA_PATH` environment variable
-3. **Configuration file**: Set `buffer_file_path` in the configuration file
-4. **OS-specific default**: Automatic location based on OS conventions
-
-#### Default Locations by OS
-
-- **Windows**: `%LOCALAPPDATA%\OhMyPosh\TravelTime\travel_time.json`
-- **Linux**: `~/.local/share/omp-travel-time/travel_time.json`
-- **macOS**: `~/Library/Application Support/OhMyPosh/TravelTime/travel_time.json`
-
-#### Configuration Examples
-
-```json
-{
-  "buffer_file_path": ""
-}
-```
-
-The system automatically creates directories
-and validates write permissions for the specified location.
-
 ## Address Validation
 
 The system includes comprehensive address validation to ensure reliable
@@ -355,8 +326,6 @@ omp-travel-time/
 │   ├── Install-TravelTimeService.ps1    # Installation wizard
 │   ├── TravelTimeUpdater.ps1            # Main polling script (uses src/ modules)
 │   └── config/
-│       ├── travel-config.json           # Your configuration (gitignored)
-│       └── travel-config.json.template  # Template file
 ├── tests/                               # Test files and data
 ├── docs/                                # Documentation
 │   └── SOURCE_ORGANIZATION.md           # Details on the src/ structure

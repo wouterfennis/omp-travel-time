@@ -1,0 +1,11 @@
+{
+  "location_status": "available",
+  "travel_mode": "DRIVE",
+  "active_period": "15:00 - 23:00",
+  "is_active_hours": true,
+  "last_updated": "2025-10-24T20:53:57Z",
+  "distance_km": 0.1,
+  "traffic_status": "light",
+  "error_message": null,
+  "travel_time_minutes": 1.0
+}

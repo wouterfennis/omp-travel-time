@@ -18,14 +18,10 @@ function Get-BufferFilePath {
         Determines the buffer file path using the following priority order:
         1. Command-line parameter (if provided)
         2. Environment variable (OMP_TRAVEL_TIME_DATA_PATH)
-        3. Configuration file setting (buffer_file_path)
-        4. OS-specific default location
+        3. OS-specific default location
     
     .PARAMETER DataPath
         Explicit data path from command-line parameter.
-    
-    .PARAMETER Config
-        Configuration object that may contain buffer_file_path setting.
     
     .OUTPUTS
         String containing the resolved buffer file path.
@@ -37,8 +33,7 @@ function Get-BufferFilePath {
         $path = Get-BufferFilePath -DataPath "C:\MyData\travel.json" -Config $config
     #>
     param(
-        [string]$DataPath,
-        [PSCustomObject]$Config
+        [string]$DataPath
     )
     
     # Priority 1: Explicit command-line parameter
@@ -54,14 +49,7 @@ function Get-BufferFilePath {
         return $envPath
     }
     
-    # Priority 3: Configuration file setting
-    if ($Config -and $Config.PSObject.Properties.Name -contains 'buffer_file_path' -and 
-        -not [string]::IsNullOrWhiteSpace($Config.buffer_file_path)) {
-        Write-Verbose "Using configuration file path: $($Config.buffer_file_path)"
-        return $Config.buffer_file_path
-    }
-    
-    # Priority 4: OS-specific default location
+    # Priority 3: OS-specific default location
     $defaultPath = Get-DefaultBufferFilePath
     Write-Verbose "Using OS default path: $defaultPath"
     return $defaultPath

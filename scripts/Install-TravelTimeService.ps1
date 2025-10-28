@@ -22,9 +22,9 @@
 .PARAMETER EndTime
     Time when travel time tracking should end each day (HH:MM format).
 
-.PARAMETER BufferFilePath
-    Custom path for the buffer file that stores travel time data. If not specified,
-    uses OS-specific default location.
+.PARAMETER DataDirectory
+    Custom directory path where both configuration and travel time data will be stored. 
+    If not specified, uses OS-specific default location.
 
 .EXAMPLE
     .\Install-TravelTimeService.ps1
@@ -43,7 +43,7 @@ param(
     [string]$HomeAddress,
     [string]$StartTime,
     [string]$EndTime,
-    [string]$BufferFilePath,
+    [string]$DataDirectory,
     [switch]$Plain
 )
 
@@ -280,44 +280,48 @@ function Install-TravelTimeService {
         . $bufferUtilsPath
     }
     
-    if (-not $BufferFilePath) {
-        Write-Host "💾 Buffer File Location" -ForegroundColor Yellow
-        Write-Host "   Configure where travel time data should be stored." -ForegroundColor White
+    if (-not $DataDirectory) {
+        Write-Host "💾 Data Directory Location" -ForegroundColor Yellow
+        Write-Host "   Configure where travel time configuration and data will be stored." -ForegroundColor White
         Write-Host ""
         
-        # Show default location
-        $defaultPath = Get-DefaultBufferFilePath
-        Write-Host "   Default location: $defaultPath" -ForegroundColor Cyan
+        # Show default location (get directory from default buffer file path)
+        $defaultBufferPath = Get-DefaultBufferFilePath
+        $defaultDirectory = Split-Path $defaultBufferPath -Parent
+        Write-Host "   Default location: $defaultDirectory" -ForegroundColor Cyan
         Write-Host ""
         
         do {
-            $BufferFilePath = Get-UserInput "   Custom buffer file path (press Enter for default)" "" -AllowEmpty
+            $customDirectory = Get-UserInput "   Custom data directory (press Enter for default)" "" -AllowEmpty
             
-            if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
-                $BufferFilePath = ""
+            if ([string]::IsNullOrWhiteSpace($customDirectory)) {
+                $DataDirectory = $defaultDirectory
                 Write-Host "   ✓ Using default OS-specific location" -ForegroundColor Green
                 break
             }
             else {
-                # Validate the custom path
-                $pathValidation = Test-BufferFilePathAccess -Path $BufferFilePath
-                if ($pathValidation.IsValid) {
-                    if ($pathValidation.DirectoryCreated) {
-                        Write-Host "   ✓ Created directory: $(Split-Path $BufferFilePath -Parent)" -ForegroundColor Green
+                # Validate the custom directory path
+                try {
+                    if (-not (Test-Path $customDirectory)) {
+                        New-Item -ItemType Directory -Path $customDirectory -Force | Out-Null
+                        Write-Host "   ✓ Created directory: $customDirectory" -ForegroundColor Green
                     }
-                    Write-Host "   ✓ Custom buffer file path set: $BufferFilePath" -ForegroundColor Green
+                    
+                    # Test write access
+                    $testFile = Join-Path $customDirectory "test_write.tmp"
+                    "test" | Out-File $testFile -ErrorAction Stop
+                    Remove-Item $testFile -ErrorAction SilentlyContinue
+                    
+                    $DataDirectory = $customDirectory
+                    Write-Host "   ✓ Custom data directory set: $customDirectory" -ForegroundColor Green
                     break
                 }
-                else {
-                    Write-Host "   ❌ Invalid path:" -ForegroundColor Red
-                    foreach ($issue in $pathValidation.Issues) {
-                        Write-Host "      • $issue" -ForegroundColor Red
-                    }
+                catch {
+                    Write-Host "   ❌ Invalid directory: $_" -ForegroundColor Red
                     Write-Host ""
-                    $BufferFilePath = $null
                 }
             }
-        } while ($BufferFilePath -eq $null)
+        } while ($true)
         
         Write-Host ""
     }
@@ -326,12 +330,7 @@ function Install-TravelTimeService {
     Write-Host "   • API Key: ********" -ForegroundColor White
     Write-Host "   • Home Address: $HomeAddress" -ForegroundColor White
     Write-Host "   • Active Hours: $StartTime - $EndTime" -ForegroundColor White
-    if ([string]::IsNullOrWhiteSpace($BufferFilePath)) {
-        Write-Host "   • Buffer File: Default OS location" -ForegroundColor White
-    }
-    else {
-        Write-Host "   • Buffer File: $BufferFilePath" -ForegroundColor White
-    }
+    Write-Host "   • Data Directory: $DataDirectory" -ForegroundColor White
     Write-Host ""
     
     $confirm = Read-Host "Continue with installation? [Y/n]"
@@ -346,13 +345,24 @@ function Install-TravelTimeService {
     Write-Host "🔧 Installing Travel Time Service..." -ForegroundColor Green
     Write-Host ""
     
-    # Create config file
-    $configPath = "$scriptRoot\config\travel-config.json"
-    $configDir = Split-Path $configPath -Parent
-    
-    if (-not (Test-Path $configDir)) {
-        New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+    # Ensure the data directory exists
+    if (-not (Test-Path $DataDirectory)) {
+        try {
+            New-Item -ItemType Directory -Path $DataDirectory -Force | Out-Null
+            Write-Host "   ✓ Created data directory: $DataDirectory" -ForegroundColor Green
+        }
+        catch {
+            Write-Error "Failed to create data directory: $DataDirectory. Error: $_"
+            return
+        }
     }
+    else {
+        Write-Host "   ✓ Data directory exists: $DataDirectory" -ForegroundColor Green
+    }
+    
+    # Create config file in the data directory
+    $configPath = Join-Path $DataDirectory "travel-config.json"
+    $finalDataPath = Join-Path $DataDirectory "travel_time.json"
     
     $config = @{
         google_routes_api_key = $GoogleMapsApiKey
@@ -363,11 +373,17 @@ function Install-TravelTimeService {
         travel_mode = "DRIVE"
         routing_preference = "TRAFFIC_AWARE"
         units = "METRIC"
-        buffer_file_path = $BufferFilePath
     }
     
     $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath -Encoding UTF8
     Write-Host "   ✓ Created config file: $configPath" -ForegroundColor Green
+    
+    # Set environment variable for the data directory
+    [Environment]::SetEnvironmentVariable('OMP_TRAVEL_TIME_DATA_PATH', $finalDataPath, [EnvironmentVariableTarget]::User)
+    [Environment]::SetEnvironmentVariable('OMP_TRAVEL_TIME_DIR', $DataDirectory, [EnvironmentVariableTarget]::User)
+    Write-Host "   ✓ Set environment variables:" -ForegroundColor Green
+    Write-Host "     OMP_TRAVEL_TIME_DIR=$DataDirectory" -ForegroundColor Gray
+    Write-Host "     OMP_TRAVEL_TIME_DATA_PATH=$finalDataPath" -ForegroundColor Gray
     
     # Create scheduled task
     $taskName = "OhMyPosh-TravelTime"
@@ -385,15 +401,21 @@ function Install-TravelTimeService {
         Write-Error "Failed to remove existing scheduled task: $_"
     }
     
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+    # Create the action with explicit paths to avoid environment variable issues
+    $actionArguments = "-WindowStyle Hidden -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`" -DataPath `"$finalDataPath`" -ConfigPath `"$configPath`""
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArguments
 
     # Create a minimal one-time trigger (no repetition specified here) that starts next minute.
     $startAt = (Get-Date).AddMinutes(1).AddSeconds(- (Get-Date).Second)
     $trigger = New-ScheduledTaskTrigger -Once -At $startAt
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -Hidden
+    
+    # Create principal to run as current user (not SYSTEM)
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Highest
 
     try {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" | Out-Null
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Updates travel time data for Oh My Posh prompt using Google Routes API" | Out-Null
         Write-Host "   ✓ Created scheduled task: $taskName" -ForegroundColor Green
     }
     catch {
@@ -420,35 +442,11 @@ function Install-TravelTimeService {
         Write-Warning "Failed to adjust repetition on scheduled task: $_"
     }
     
-    # Create .gitignore entry
-    $gitignorePath = "$projectRoot\.gitignore"
-    $gitignoreEntries = @(
-        "",
-        "# Travel time service data and config",
-        "data/travel_time.json",
-        "scripts/config/travel-config.json"
-    )
-    
-    if (Test-Path $gitignorePath) {
-        $existingContent = Get-Content $gitignorePath -ErrorAction SilentlyContinue
-        if ($existingContent -notcontains "scripts/config/travel-config.json") {
-            Add-Content -Path $gitignorePath -Value ($gitignoreEntries -join "`n")
-            Write-Host "   ✓ Updated .gitignore" -ForegroundColor Green
-        }
-        else {
-            Write-Host "   ✓ .gitignore already contains travel time entries" -ForegroundColor Green
-        }
-    }
-    else {
-        Set-Content -Path $gitignorePath -Value ($gitignoreEntries -join "`n")
-        Write-Host "   ✓ Created .gitignore" -ForegroundColor Green
-    }
-    
     # Run initial update
     Write-Host ""
     Write-Host "🚀 Running initial travel time update..." -ForegroundColor Yellow
     try {
-        & $scriptPath
+        & $scriptPath -ConfigPath "$configPath" -DataPath "$finalDataPath"
         Write-Host "   ✓ Initial update completed successfully" -ForegroundColor Green
     }
     catch {
@@ -458,7 +456,7 @@ function Install-TravelTimeService {
     
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║                    Installation Complete!                   ║" -ForegroundColor Green
+    Write-Host "║                    Installation Complete!                    ║" -ForegroundColor Green
     Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
     Write-Host "🎯 Travel time tracking is now active from $StartTime to $EndTime daily" -ForegroundColor White
@@ -470,8 +468,9 @@ function Install-TravelTimeService {
     Write-Host ""
     Write-Host "🔧 Management commands:" -ForegroundColor Cyan
     Write-Host "   • View scheduled task: Get-ScheduledTask -TaskName '$taskName'" -ForegroundColor White
-    Write-Host "   • Check data file: Get-Content '$projectRoot\data\travel_time.json'" -ForegroundColor White
-    Write-Host "   • Manual update: & '$scriptPath'" -ForegroundColor White
+    Write-Host "   • Check data file: Get-Content '$finalDataPath'" -ForegroundColor White
+    Write-Host "   • Check config file: Get-Content '$configPath'" -ForegroundColor White
+    Write-Host "   • Manual update: & '$scriptPath' -ConfigPath '$configPath' -DataPath '$finalDataPath'" -ForegroundColor White
     Write-Host ""
 }
 
