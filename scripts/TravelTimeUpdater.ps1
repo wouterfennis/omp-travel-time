@@ -9,14 +9,12 @@
     the result in a JSON file that can be read by Oh My Posh prompt configuration.
     
     The script only fetches data during configured active hours to optimize API usage.
-    
-    This script now uses the modular src/ structure for better code organization.
 
 .PARAMETER ConfigPath
-    Path to the travel configuration JSON file. Defaults to config\travel-config.json.
+    Path to the travel configuration JSON file.
 
 .PARAMETER DataPath
-    Path where travel time data will be stored. Defaults to ..\data\travel_time.json.
+    Path where travel time data will be stored.
 
 .EXAMPLE
     .\TravelTimeUpdater.ps1
