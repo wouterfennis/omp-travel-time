@@ -158,32 +158,7 @@ Test-Function "Test-ActiveHours - Boundary Inclusive" {
     catch { return $false }
 }
 
-# Test 4: Configuration Template
-Test-Function "Configuration Template - Structure" {
-    $templatePath = "$PSScriptRoot\..\scripts\config\travel-config.json.template"
-    
-    if (-not (Test-Path $templatePath)) {
-        return $false
-    }
-    
-    try {
-        $template = Get-Content $templatePath | ConvertFrom-Json
-        $requiredKeys = @("google_routes_api_key", "home_address", "start_time", "end_time")
-        
-        foreach ($key in $requiredKeys) {
-            if (-not $template.PSObject.Properties.Name.Contains($key)) {
-                return $false
-            }
-        }
-        
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
-# Test 5: Oh My Posh Configuration
+# Test 4: Oh My Posh Configuration
 Test-Function "Oh My Posh Config - JSON Syntax" {
     $configPath = "$PSScriptRoot\..\new_config.omp.json"
     

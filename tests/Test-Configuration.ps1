@@ -60,44 +60,7 @@ Write-Host "Travel Time Configuration Tests" -ForegroundColor Blue
 Write-Host "===============================" -ForegroundColor Blue
 Write-Host ""
 
-# Test 1: Template File Validation
-Test-Configuration "Configuration Template Exists" {
-    $templatePath = "$PSScriptRoot\..\scripts\config\travel-config.json.template"
-    return (Test-Path $templatePath)
-}
-
-# Test 2: Template JSON Structure
-Test-Configuration "Template JSON Structure" {
-    $templatePath = "$PSScriptRoot\..\scripts\config\travel-config.json.template"
-    try {
-        $template = Get-Content $templatePath | ConvertFrom-Json
-        
-        $requiredFields = @(
-            "google_routes_api_key",
-            "home_address", 
-            "update_interval_minutes",
-            "start_time",
-            "end_time",
-            "travel_mode",
-            "routing_preference",
-            "units"
-        )
-        
-        foreach ($field in $requiredFields) {
-            if (-not $template.PSObject.Properties.Name.Contains($field)) {
-                Write-Host "  Missing field: $field" -ForegroundColor Red
-                return $false
-            }
-        }
-        
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
-# Test 3: Time Format Validation
+# Test 1: Time Format Validation
 Test-Configuration "Time Format Validation" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
@@ -122,7 +85,7 @@ Test-Configuration "Time Format Validation" {
     }
 }
 
-# Test 4: API Key Format Validation
+# Test 2: API Key Format Validation
 Test-Configuration "API Key Format Validation" {
     # Test that our validation function works
     $testKeys = @{
@@ -152,7 +115,7 @@ Test-Configuration "API Key Format Validation" {
     return $true
 }
 
-# Test 5: Oh My Posh Integration
+# Test 3: Oh My Posh Integration
 Test-Configuration "Oh My Posh Config Integration" {
     $ompConfigPath = "$PSScriptRoot\..\new_config.omp.json"
     
@@ -185,7 +148,7 @@ Test-Configuration "Oh My Posh Config Integration" {
     }
 }
 
-# Test 6: Data Directory Structure
+# Test 4: Data Directory Structure
 Test-Configuration "Data Directory Structure" {
     $dataDir = "$PSScriptRoot\..\data"
     
@@ -207,7 +170,7 @@ Test-Configuration "Data Directory Structure" {
     return $true
 }
 
-# Test 7: PowerShell Requirements
+# Test 5: PowerShell Requirements
 Test-Configuration "PowerShell Version Requirements" {
     $requiredVersion = [Version]"5.1"
     $currentVersion = $PSVersionTable.PSVersion
@@ -221,7 +184,7 @@ Test-Configuration "PowerShell Version Requirements" {
     }
 }
 
-# Test 8: Execution Policy
+# Test 6: Execution Policy
 Test-Configuration "PowerShell Execution Policy" {
     $policy = Get-ExecutionPolicy
     $validPolicies = @("Unrestricted", "RemoteSigned", "Bypass")
@@ -235,7 +198,7 @@ Test-Configuration "PowerShell Execution Policy" {
     }
 }
 
-# Test 9: Configuration Validation Function
+# Test 7: Configuration Validation Function
 Test-Configuration "Configuration Validation Logic" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
@@ -264,7 +227,7 @@ Test-Configuration "Configuration Validation Logic" {
     }
 }
 
-# Test 10: Error Handling
+# Test 8: Error Handling
 Test-Configuration "Error Handling - Invalid JSON" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"

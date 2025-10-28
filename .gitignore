@@ -417,10 +417,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# Travel Time Service specific files
-data/travel_time.json
-scripts/config/travel-config.json
-
 # Temporary test files
 tests/test-config.json
 tests/*.tmp
