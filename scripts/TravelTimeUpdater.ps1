@@ -26,7 +26,10 @@
 #>
 
 param(
+    [Parameter(Mandatory = $true)]
     [string]$ConfigPath,
+    
+    [Parameter(Mandatory = $true)]
     [string]$DataPath
 )
 
