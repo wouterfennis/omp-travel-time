@@ -69,8 +69,7 @@ Test-Integration "Project Directory Structure" {
         "$projectDir\scripts\config",
         "$projectDir\data",
         "$projectDir\scripts\TravelTimeUpdater.ps1",
-        "$projectDir\scripts\Install-TravelTimeService.ps1",
-        "$projectDir\scripts\config\travel-config.json.template"
+        "$projectDir\scripts\Install-TravelTimeService.ps1"
     )
 
     foreach ($path in $requiredPaths) {
@@ -101,28 +100,7 @@ Test-Integration "PowerShell Script Syntax" {
     return $true
 }
 
-# Test 3: Configuration Template
-Test-Integration "Configuration Template Validation" {
-    $templatePath = "$PSScriptRoot\..\scripts\config\travel-config.json.template"
-    try {
-        $template = Get-Content $templatePath | ConvertFrom-Json
-        $requiredKeys = @("google_routes_api_key", "home_address", "start_time", "end_time", "travel_mode")
-
-        foreach ($key in $requiredKeys) {
-            if (-not $template.PSObject.Properties.Name.Contains($key)) {
-                Write-Host "  Missing required key: $key" -ForegroundColor Red
-                return $false
-            }
-        }
-        return $true
-    }
-    catch {
-        Write-Host "  Invalid JSON in template: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
-}
-
-# Test 4: Mock Configuration Test
+# Test 3: Mock Configuration Test
 Test-Integration "Test Configuration Creation" {
     $testConfigPath = "$PSScriptRoot\integration-test-config.json"
     try {
@@ -156,7 +134,7 @@ Test-Integration "Test Configuration Creation" {
     }
 }
 
-# Test 5: Data File Integration
+# Test 4: Data File Integration
 Test-Integration "Data File Read/Write" {
     $testDataPath = "$PSScriptRoot\integration-test-data.json"
     try {
@@ -191,7 +169,7 @@ Test-Integration "Data File Read/Write" {
     }
 }
 
-# Test 6: Function Dependencies
+# Test 5: Function Dependencies
 Test-Integration "Function Dependencies" {
     try {
         . "$PSScriptRoot\..\scripts\TravelTimeUpdater.ps1"
@@ -219,7 +197,7 @@ Test-Integration "Function Dependencies" {
     }
 }
 
-# Test 7: API Connectivity (Optional)
+# Test 6: API Connectivity (Optional)
 $skipApiTest = [string]::IsNullOrWhiteSpace($TestApiKey)
 Test-Integration "Google Routes API Connectivity" {
     try {

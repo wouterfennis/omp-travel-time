@@ -108,32 +108,6 @@ function Test-ConfigurationFile {
         }
     }
     
-    # Validate buffer file path if specified
-    if ($Config.PSObject.Properties.Name -contains 'buffer_file_path' -and 
-        -not [string]::IsNullOrWhiteSpace($Config.buffer_file_path)) {
-        try {
-            # Import buffer path utilities if not already loaded
-            $bufferUtilsPath = Join-Path $PSScriptRoot "..\utils\BufferPathUtils.ps1"
-            if (Test-Path $bufferUtilsPath) {
-                . $bufferUtilsPath
-                
-                $bufferPathResult = Test-BufferFilePathAccess -Path $Config.buffer_file_path
-                $result.BufferPathValidation = $bufferPathResult
-                
-                if (-not $bufferPathResult.IsValid) {
-                    $result.IsValid = $false
-                    $result.Issues += "Buffer file path validation failed: $($bufferPathResult.Issues -join ', ')"
-                }
-            }
-            else {
-                $result.Warnings += "Buffer path utilities not found - skipping buffer path validation"
-            }
-        }
-        catch {
-            $result.Warnings += "Buffer file path validation failed: $($_.Exception.Message)"
-        }
-    }
-    
     # Perform address validation if requested and address is present
     if ($ValidateAddress -and $Config.home_address -and -not [string]::IsNullOrWhiteSpace($Config.home_address)) {
         try {

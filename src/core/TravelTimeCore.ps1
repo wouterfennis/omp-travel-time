@@ -29,8 +29,7 @@ function Update-TravelTimeData {
         The buffer file location is determined by the following priority order:
         1. Explicit DataPath parameter
         2. Environment variable (OMP_TRAVEL_TIME_DATA_PATH)
-        3. Configuration file setting (buffer_file_path)
-        4. OS-specific default location
+        3. OS-specific default location
     
     .PARAMETER ConfigPath
         Path to the configuration file.
